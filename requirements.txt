@@ -1,0 +1,2 @@
+fusepy==2.0.*
+ipfsapi==0.4.*
