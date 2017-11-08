@@ -130,7 +130,10 @@ class IPFSMount(fuse.Operations):
             'st_mode': {
                 TYPE_FILE: stat.S_IFREG,
                 TYPE_DIR: stat.S_IFDIR,
-            }[self._path_type(path)],
+            }[self._path_type(path)] |
+                stat.S_IRUSR |
+                stat.S_IRGRP |
+                stat.S_IROTH,
             'st_nlink': 0,
             'st_size': self._path_size(path),
         }

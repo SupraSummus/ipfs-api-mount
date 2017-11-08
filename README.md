@@ -71,4 +71,4 @@ performance.
 Tests
 -----
 
-    cat test_dirs | xargs -n1 ./test_re_add.sh
+    ./test.sh
