@@ -150,6 +150,10 @@ if __name__ == '__main__':
     parser.add_argument('--chunk-cache-size', type=int, default=32, help='Max number of chunks kept in cache.')
     parser.add_argument('--ls-cache-size', type=int, default=256, help='Max number of ls results kept in cache.')
     parser.add_argument('--foreground', action='store_true', help='Remain in foreground.')
+    parser.add_argument('--api-host', type=str, default='127.0.0.1', help='IPFS API host')
+    parser.add_argument('--api-port', type=int, default=5001, help='IPFS API port')
+    parser.add_argument('--gateway-host', type=str, default='127.0.0.1', help='IPFS gateway host')
+    parser.add_argument('--gateway-port', type=int, default=8080, help='IPFS gateway port')
     parser.add_argument('root', type=str, help='Hash of IPFS dir to be mounted.')
     parser.add_argument('mountpoint', type=str, help='Local mountpoint path.')
 
@@ -161,6 +165,10 @@ if __name__ == '__main__':
             chunk_size=args.chunk_size,
             chunk_cache_size=args.chunk_cache_size,
             ls_cache_size=args.ls_cache_size,
+            api_host=args.api_host,
+            api_port=args.api_port,
+            gateway_host=args.gateway_host,
+            gateway_port=args.gateway_port,
         ),
         args.mountpoint,
         foreground=args.foreground,
