@@ -55,6 +55,27 @@ Output at my puny (intel atom, EMMC storage) machine with go-ipfs 0.4.11:
     user	0m0.000s
     sys	0m0.200s
 
+    (venv) [jan@aaa ipfs-api-mount]$ ./benchmark.sh 100
+    100MB of zeroes at:
+        Qmca3PNFKuZnYkiVv1FpcV1AfDUm4qCSHoYjPTBqDAsyk8
+        QmaLb3YYnFMfg7nSsRo2JrQwC52VDZym7EdmNcdbtvTbRM/zeroes
+
+    ### ipfs cat Qmca3PNFKuZnYkiVv1FpcV1AfDUm4qCSHoYjPTBqDAsyk8
+
+    real	0m1.758s
+    user	0m0.609s
+    sys	0m1.035s
+
+    ### python ipfs_api_mount.py QmaLb3YYnFMfg7nSsRo2JrQwC52VDZym7EdmNcdbtvTbRM /tmp/tmp.bLG79MLHhS
+    ### cat /tmp/tmp.bLG79MLHhS/zeroes
+
+    real	0m7.600s
+    user	0m0.000s
+    sys	0m0.131s
+
+    ### cat /ipfs/Qmca3PNFKuZnYkiVv1FpcV1AfDUm4qCSHoYjPTBqDAsyk8
+    ^C # ... and I'm not patient enough
+
 More in depth description
 -------------------------
 
