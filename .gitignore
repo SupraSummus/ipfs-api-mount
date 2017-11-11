@@ -1,1 +1,4 @@
+build/
+dist/
+ipfs_api_mount.egg-info/
 venv/
