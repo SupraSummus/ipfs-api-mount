@@ -2,3 +2,5 @@ build/
 dist/
 ipfs_api_mount.egg-info/
 venv/
+unixfs_pb2.py
+*.pyc

@@ -10,9 +10,10 @@ import fuse
 import ipfsapi
 import requests
 
+import unixfs_pb2
 
-TYPE_FILE = 2
-TYPE_DIR = 1
+TYPE_FILE = unixfs_pb2.Data.File
+TYPE_DIR = unixfs_pb2.Data.Directory
 
 
 class IPFSMount(fuse.Operations):
@@ -24,6 +25,7 @@ class IPFSMount(fuse.Operations):
         ls_cache_size=256,
         chunk_size=8*1024*1024, # 8MB
         chunk_cache_size=32, # up to 256MB
+        object_cache_size=32,
     ):
         api = ipfsapi.connect(api_host, api_port)
         gateway = requests.Session()
@@ -31,6 +33,16 @@ class IPFSMount(fuse.Operations):
         self.chunk_size = chunk_size
 
         # trick to get lrucache use only one arg
+
+        @lru_cache(maxsize=object_cache_size)
+        def read_object(path):
+            full_path = os.path.join('/ipfs', root + path)
+            try:
+                data = unixfs_pb2.Data()
+                data.ParseFromString(api.object_data(full_path))
+                return data
+            except ipfsapi.exceptions.Error:
+                return None
 
         @lru_cache(maxsize=ls_cache_size)
         def ls(path):
@@ -58,28 +70,19 @@ class IPFSMount(fuse.Operations):
             response.raise_for_status()
             return response.content
 
-        def stat(path):
-            if path == '/':
-                return {
-                    'Type': TYPE_DIR,
-                    'Size': 0, # a little lie
-                }
-            head, tail = os.path.split(path)
-            return ls(head).get(tail)
-
         def path_type(path):
-            s = stat(path)
-            if s is None:
+            data = read_object(path)
+            if data is None:
                 return None
             else:
-                return s.get('Type')
+                return data.Type
 
         def path_size(path):
-            s = stat(path)
-            if s is None:
+            data = read_object(path)
+            if data is None:
                 return None
             else:
-                return s.get('Size')
+                return data.filesize
 
         self._ls = ls
         self._read_chunk = read_chunk
