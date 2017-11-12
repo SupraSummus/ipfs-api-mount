@@ -14,7 +14,7 @@ echo
 
 tmp_mnt=$(mktemp -d)
 echo "### python ipfs_api_mount.py $zeroes_in_dir $tmp_mnt"
-python ipfs_api_mount.py "$zeroes_in_dir" "$tmp_mnt"
+python ipfs_api_mount.py --background "$zeroes_in_dir" "$tmp_mnt"
 echo "### cat $tmp_mnt/zeroes"
 time cat "$tmp_mnt/zeroes" >/dev/null
 fusermount -u "$tmp_mnt"

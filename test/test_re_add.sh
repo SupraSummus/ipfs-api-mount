@@ -7,7 +7,7 @@ function cleanup {
 trap cleanup EXIT
 
 tmp_mnt=$(mktemp -d)
-python ipfs_api_mount.py --chunk-size 7 "$1" "$tmp_mnt" 
+python ipfs_api_mount.py --background "$1" "$tmp_mnt"
 
 new_hash=$(ipfs add -r -Q --pin=false "$tmp_mnt")
 

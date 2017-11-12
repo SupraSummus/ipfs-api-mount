@@ -7,7 +7,7 @@ function cleanup {
 trap cleanup EXIT
 
 tmp_mnt=$(mktemp -d)
-python ipfs_api_mount.py QmXKqqUymTQpEM89M15G23wot8g7n1qVYQQ6vVCpEofYSe "$tmp_mnt" 
+python ipfs_api_mount.py --background QmXKqqUymTQpEM89M15G23wot8g7n1qVYQQ6vVCpEofYSe "$tmp_mnt"
 
 if [ "$(ls -l "$tmp_mnt")" != "\
 total 0

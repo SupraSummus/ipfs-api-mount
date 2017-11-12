@@ -16,7 +16,7 @@ How to use
 Install deps in a virtualenv (or systemwide) and then
 
     mkdir a_dir
-    ./ipfs_api_mount.py QmXKqqUymTQpEM89M15G23wot8g7n1qVYQQ6vVCpEofYSe a_dir
+    ./ipfs_api_mount.py --background QmXKqqUymTQpEM89M15G23wot8g7n1qVYQQ6vVCpEofYSe a_dir
     ls a_dir
     # aaa  bbb
 
@@ -29,6 +29,9 @@ Benchmark
 
 Try it yourself and run `./benchamrk [number of Mbytes]`.
 
+(Benchmark is a bit unfair because files are all zeros. This causes
+massive amounts of deduplication and makes cache effects excellent.)
+
 Output at my puny (intel atom, EMMC storage) machine with go-ipfs 0.4.11:
 
     (venv) [jan@aaa ipfs-api-mount]$ ./benchmark.sh 10
@@ -38,40 +41,40 @@ Output at my puny (intel atom, EMMC storage) machine with go-ipfs 0.4.11:
 
     ### ipfs cat QmaJ6kN9fW3TKpVkpf1NuW7cjhHjNp5Jwr3cQuHzsoZWkJ
 
-    real	0m0.358s
-    user	0m0.205s
-    sys	0m0.136s
+    real	0m0.346s
+    user	0m0.193s
+    sys	0m0.134s
 
-    ### python ipfs_api_mount.py QmYrFyYenMpLxeWZJZqhkwkqjXTdsMqwM82yqzHbKxh7j2 /tmp/tmp.iL7USPLnnf
-    ### cat /tmp/tmp.iL7USPLnnf/zeroes
+    ### python ipfs_api_mount.py QmYrFyYenMpLxeWZJZqhkwkqjXTdsMqwM82yqzHbKxh7j2 /tmp/tmp.NrUuA6pLT6
+    ### cat /tmp/tmp.NrUuA6pLT6/zeroes
 
-    real	0m0.523s
+    real	0m0.136s
     user	0m0.000s
     sys	0m0.015s
 
     ### cat /ipfs/QmaJ6kN9fW3TKpVkpf1NuW7cjhHjNp5Jwr3cQuHzsoZWkJ
 
-    real	0m7.006s
+    real	0m6.858s
     user	0m0.000s
-    sys	0m0.200s
+    sys	0m0.217s
 
     (venv) [jan@aaa ipfs-api-mount]$ ./benchmark.sh 100
     100MB of zeroes at:
-        Qmca3PNFKuZnYkiVv1FpcV1AfDUm4qCSHoYjPTBqDAsyk8
-        QmaLb3YYnFMfg7nSsRo2JrQwC52VDZym7EdmNcdbtvTbRM/zeroes
+    	Qmca3PNFKuZnYkiVv1FpcV1AfDUm4qCSHoYjPTBqDAsyk8
+    	QmaLb3YYnFMfg7nSsRo2JrQwC52VDZym7EdmNcdbtvTbRM/zeroes
 
     ### ipfs cat Qmca3PNFKuZnYkiVv1FpcV1AfDUm4qCSHoYjPTBqDAsyk8
 
-    real	0m1.758s
-    user	0m0.609s
-    sys	0m1.035s
+    real	0m1.795s
+    user	0m0.600s
+    sys	0m1.050s
 
-    ### python ipfs_api_mount.py QmaLb3YYnFMfg7nSsRo2JrQwC52VDZym7EdmNcdbtvTbRM /tmp/tmp.bLG79MLHhS
-    ### cat /tmp/tmp.bLG79MLHhS/zeroes
+    ### python ipfs_api_mount.py QmaLb3YYnFMfg7nSsRo2JrQwC52VDZym7EdmNcdbtvTbRM /tmp/tmp.r2gkT7qMXN
+    ### cat /tmp/tmp.r2gkT7qMXN/zeroes
 
-    real	0m7.600s
+    real	0m0.740s
     user	0m0.000s
-    sys	0m0.131s
+    sys	0m0.096s
 
     ### cat /ipfs/Qmca3PNFKuZnYkiVv1FpcV1AfDUm4qCSHoYjPTBqDAsyk8
     ^C # ... and I'm not patient enough
@@ -79,15 +82,13 @@ Output at my puny (intel atom, EMMC storage) machine with go-ipfs 0.4.11:
 More in depth description
 -------------------------
 
-`ipfs-api-mount` uses both node API and gateway interfaces. Node API is
-used for listing directories. Accessing gateway with `Range` header is
-then only way to read range from file (AFAIK).
-
-`ipfs-api-mount` uses fixed-size chunk caching. Cache has fixed max size.
-In case of multiple parelell reads there is a risk of cache thrashing.
+`ipfs-api-mount` uses node API for listing directories and reading
+objects. Objects are decoded and file structure is created localy (not
+in IPFS node). Caching is added on objects level. In case of nonlinear
+file access with many small reads there is a risk of cache thrashing.
 If this occurs performance will be much worst than without cache. When
-using the command you can adjust chunk size and cache size to get best
-performance.
+using the command you can adjust cache size to get best performance (but
+for cache thrashing there is little hope).
 
 Tests
 -----
