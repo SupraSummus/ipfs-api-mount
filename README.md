@@ -4,7 +4,8 @@ ipfs-api-mount
 Mount IPFS directory as local FS.
 
 go-ipfs daemon has this function but as of version 0.4.11 it's slow.
-`ipfs-api-mount` aims to be more efficient.
+`ipfs-api-mount` aims to be more efficient. For sequential access to
+random data it's ~4 times slower than `ipfs cat`.
 
 It's supposed that FS mounted by go-ipfs daemon is slow because of file
 structure being accessed in every read. By adding caching one can improve
@@ -13,10 +14,10 @@ performance a lot.
 How to use
 ----------
 
-Install deps in a virtualenv (or systemwide) and then
+Install package in a virtualenv (or systemwide) and then
 
     mkdir a_dir
-    ./ipfs_api_mount.py --background QmXKqqUymTQpEM89M15G23wot8g7n1qVYQQ6vVCpEofYSe a_dir
+    ipfs-api-mount --background QmXKqqUymTQpEM89M15G23wot8g7n1qVYQQ6vVCpEofYSe a_dir
     ls a_dir
     # aaa  bbb
 
@@ -45,7 +46,7 @@ Output at my puny (intel atom, EMMC storage) machine with go-ipfs 0.4.11:
     user	0m0.193s
     sys	0m0.134s
 
-    ### python ipfs_api_mount.py QmYrFyYenMpLxeWZJZqhkwkqjXTdsMqwM82yqzHbKxh7j2 /tmp/tmp.NrUuA6pLT6
+    ### ipfs-api-mount QmYrFyYenMpLxeWZJZqhkwkqjXTdsMqwM82yqzHbKxh7j2 /tmp/tmp.NrUuA6pLT6
     ### cat /tmp/tmp.NrUuA6pLT6/zeroes
 
     real	0m0.136s
@@ -69,7 +70,7 @@ Output at my puny (intel atom, EMMC storage) machine with go-ipfs 0.4.11:
     user	0m0.600s
     sys	0m1.050s
 
-    ### python ipfs_api_mount.py QmaLb3YYnFMfg7nSsRo2JrQwC52VDZym7EdmNcdbtvTbRM /tmp/tmp.r2gkT7qMXN
+    ### ipfs-api-mount QmaLb3YYnFMfg7nSsRo2JrQwC52VDZym7EdmNcdbtvTbRM /tmp/tmp.r2gkT7qMXN
     ### cat /tmp/tmp.r2gkT7qMXN/zeroes
 
     real	0m0.740s

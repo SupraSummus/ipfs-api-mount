@@ -7,7 +7,7 @@ from subprocess import check_call
 class custom_build(build):
     def run(self):
         if not self.dry_run:
-            check_call(['protoc', '--python_out=.', 'unixfs.proto'])
+            check_call(['protoc', '--python_out=.', 'ipfs_api_mount/unixfs.proto'])
         build.run(self)
 
 
@@ -23,6 +23,7 @@ setup(
     setup_requires=[
         'protobuf',
     ],
-    scripts=['ipfs_api_mount.py'],
+    packages=['ipfs_api_mount'],
+    scripts=['bin/ipfs-api-mount'],
     cmdclass={'build': custom_build},
 )

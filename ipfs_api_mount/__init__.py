@@ -7,7 +7,7 @@ from functools import lru_cache
 import fuse
 import ipfsapi
 
-import unixfs_pb2
+from . import unixfs_pb2
 
 TYPE_FILE = unixfs_pb2.Data.File
 TYPE_DIR = unixfs_pb2.Data.Directory
@@ -171,34 +171,3 @@ class IPFSMount(fuse.Operations):
 
     getxattr = None
     listxattr = None
-
-
-if __name__ == '__main__':
-    import argparse
-
-    parser = argparse.ArgumentParser(description='Mount specified IPFS directory as local FS.')
-    parser.add_argument('--ls-cache-size', type=int, default=64, help='Max number of ls results kept in cache.')
-    parser.add_argument('--object-data-cache-size', type=int, default=256, help='Max number of object data secrions kept in cache.')
-    parser.add_argument('--object-links-cache-size', type=int, default=256, help='Max number of object link sections kept in cache.')
-    parser.add_argument('-b', '--background', action='store_true', help='Run in background.')
-    parser.add_argument('-m', '--multithreaded', action='store_true', help='Use multiple threads to handle FS requests.')
-    parser.add_argument('--api-host', type=str, default='127.0.0.1', help='IPFS API host')
-    parser.add_argument('--api-port', type=int, default=5001, help='IPFS API port')
-    parser.add_argument('root', type=str, help='Hash of IPFS dir to be mounted.')
-    parser.add_argument('mountpoint', type=str, help='Local mountpoint path.')
-
-    args = parser.parse_args()
-
-    fuse.FUSE(
-        IPFSMount(
-            args.root,
-            ls_cache_size=args.ls_cache_size,
-            object_data_cache_size=args.object_data_cache_size,
-            object_links_cache_size=args.object_links_cache_size,
-            api_host=args.api_host,
-            api_port=args.api_port,
-        ),
-        args.mountpoint,
-        foreground=not args.background,
-        nothreads=not args.multithreaded,
-    )
