@@ -1,8 +1,9 @@
 #!/usr/bin/env python
 
 import errno
-import stat
 from functools import lru_cache
+import os
+import stat
 
 import fuse
 import ipfsapi
@@ -53,25 +54,23 @@ class IPFSMount(fuse.Operations):
                 for entry in api.ls(object_id)['Objects'][0]['Links']
             }
 
-        def path_type(path):
-            data = object_data(path)
-            if data is None:
-                return None
-            else:
-                return data.Type
-
-        def path_size(path):
-            data = object_data(path)
-            if data is None:
-                return None
-            else:
-                return data.filesize
-
         self._ls = ls
         self._object_data = object_data
         self._object_links = object_links
-        self._path_type = path_type
-        self._path_size = path_size
+
+    def _path_type(self, path):
+        data = self._object_data(path)
+        if data is None:
+            return None
+        else:
+            return data.Type
+
+    def _path_size(self, path):
+        data = self._object_data(path)
+        if data is None:
+            return None
+        else:
+            return data.filesize
 
     def _read_into(self, object_hash, offset, buff):
         """ Read bytes begining at `offset` from given object into
@@ -128,11 +127,21 @@ class IPFSMount(fuse.Operations):
         return offset
 
     def open(self, path, flags):
-        if self._path_type(self.root + path) in (TYPE_DIR, TYPE_FILE):
-            # we dont use file handles so return anthing
-            return 0
-        else:
+        write_flags = (
+            os.O_WRONLY |
+            os.O_RDWR |
+            os.O_APPEND |
+            os.O_CREAT |
+            os.O_EXCL |
+            os.O_TRUNC
+        )
+        if (flags & write_flags) != 0:
+            raise fuse.FuseOSError(errno.EROFS)
+        elif self._path_type(self.root + path) not in (TYPE_DIR, TYPE_FILE):
             raise fuse.FuseOSError(errno.ENOENT)
+
+        # we dont use file handles so return anthing
+        return 0
 
     def read(self, path, size, offset, fh):
         if self._path_type(self.root + path) != TYPE_FILE:
