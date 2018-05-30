@@ -1,3 +1,0 @@
-fusepy==2.0.*
-ipfsapi==0.4.*
-protobuf==3.4.*
