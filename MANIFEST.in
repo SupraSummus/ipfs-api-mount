@@ -1,0 +1,2 @@
+include ipfs_api_mount/unixfs.proto
+exclude ipfs_api_mount/unixfs_pb2.py
