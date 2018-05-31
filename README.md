@@ -3,9 +3,10 @@ ipfs-api-mount
 
 Mount IPFS directory as local FS.
 
-go-ipfs daemon has this function but as of version 0.4.11 it's slow.
+go-ipfs daemon has this function but as of version 0.4.15 it's slow.
 `ipfs-api-mount` aims to be more efficient. For sequential access to
-random data it's ~4 times slower than `ipfs cat`.
+random data it's ~3 times slower than `ipfs cat` but also ~20 times
+faster than `cat`ing files mounted by go-ipfs.
 
 It's supposed that FS mounted by go-ipfs daemon is slow because of file
 structure being accessed in every read. By adding caching one can improve
@@ -14,7 +15,11 @@ performance a lot.
 How to use
 ----------
 
-Install package in a virtualenv (or systemwide) and then
+Install package ...
+
+    pip install ipfs-api-mount
+
+... and then
 
     mkdir a_dir
     ipfs-api-mount --background QmXKqqUymTQpEM89M15G23wot8g7n1qVYQQ6vVCpEofYSe a_dir
@@ -30,54 +35,53 @@ Benchmark
 
 Try it yourself and run `./benchamrk [number of Mbytes]`.
 
-(Benchmark is a bit unfair because files are all zeros. This causes
-massive amounts of deduplication and makes cache effects excellent.)
+Output at my puny (intel atom, EMMC storage) machine with go-ipfs 0.4.15:
 
-Output at my puny (intel atom, EMMC storage) machine with go-ipfs 0.4.11:
+    [jan@aaa ipfs-api-mount]$ ./benchmark.sh 10
+    creating 10MB of random data and uploading to ipfs ...
+    10MB of data at:
+        Qmbum4ndB5qsGid7FK6t2LSzrzmr3SoXytncR7xLaAFmAj
+        Qmbnkzrpx8gDz72iL3yKkHuZKtvNDJacg4gaeNgV97fAUn/data
 
-    (venv) [jan@aaa ipfs-api-mount]$ ./benchmark.sh 10
-    10MB of zeroes at:
-    	QmaJ6kN9fW3TKpVkpf1NuW7cjhHjNp5Jwr3cQuHzsoZWkJ
-    	QmYrFyYenMpLxeWZJZqhkwkqjXTdsMqwM82yqzHbKxh7j2/zeroes
+    ### ipfs cat Qmbum4ndB5qsGid7FK6t2LSzrzmr3SoXytncR7xLaAFmAj
 
-    ### ipfs cat QmaJ6kN9fW3TKpVkpf1NuW7cjhHjNp5Jwr3cQuHzsoZWkJ
+    real	0m0.524s
+    user	0m0.195s
+    sys	0m0.182s
 
-    real	0m0.346s
-    user	0m0.193s
-    sys	0m0.134s
+    ### ipfs-api-mount Qmbnkzrpx8gDz72iL3yKkHuZKtvNDJacg4gaeNgV97fAUn /tmp/tmp.M9dyRJfZcp
+    ### cat /tmp/tmp.M9dyRJfZcp/data
 
-    ### ipfs-api-mount QmYrFyYenMpLxeWZJZqhkwkqjXTdsMqwM82yqzHbKxh7j2 /tmp/tmp.NrUuA6pLT6
-    ### cat /tmp/tmp.NrUuA6pLT6/zeroes
+    real	0m1.046s
+    user	0m0.001s
+    sys	0m0.019s
 
-    real	0m0.136s
+    ### cat /ipfs/Qmbum4ndB5qsGid7FK6t2LSzrzmr3SoXytncR7xLaAFmAj
+
+    real	0m20.062s
+    user	0m0.001s
+    sys	0m0.192s
+
+    [jan@aaa ipfs-api-mount]$ ./benchmark.sh 100
+    creating 100MB of random data and uploading to ipfs ...
+    100MB of data at:
+        QmPZA3FEoW6FF4by9hdy9ic5PRkHac3dFLsfdhpjCafmGt
+        QmWx4dpofRWLKswogzQUvAzX6oi6nEd9fMMe5AD23ECHy1/data
+
+    ### ipfs cat QmPZA3FEoW6FF4by9hdy9ic5PRkHac3dFLsfdhpjCafmGt
+
+    real	0m3.907s
+    user	0m0.718s
+    sys	0m1.322s
+
+    ### ipfs-api-mount QmWx4dpofRWLKswogzQUvAzX6oi6nEd9fMMe5AD23ECHy1 /tmp/tmp.OGyZXMNSwV
+    ### cat /tmp/tmp.OGyZXMNSwV/data
+
+    real	0m9.575s
     user	0m0.000s
-    sys	0m0.015s
+    sys	0m0.171s
 
-    ### cat /ipfs/QmaJ6kN9fW3TKpVkpf1NuW7cjhHjNp5Jwr3cQuHzsoZWkJ
-
-    real	0m6.858s
-    user	0m0.000s
-    sys	0m0.217s
-
-    (venv) [jan@aaa ipfs-api-mount]$ ./benchmark.sh 100
-    100MB of zeroes at:
-    	Qmca3PNFKuZnYkiVv1FpcV1AfDUm4qCSHoYjPTBqDAsyk8
-    	QmaLb3YYnFMfg7nSsRo2JrQwC52VDZym7EdmNcdbtvTbRM/zeroes
-
-    ### ipfs cat Qmca3PNFKuZnYkiVv1FpcV1AfDUm4qCSHoYjPTBqDAsyk8
-
-    real	0m1.795s
-    user	0m0.600s
-    sys	0m1.050s
-
-    ### ipfs-api-mount QmaLb3YYnFMfg7nSsRo2JrQwC52VDZym7EdmNcdbtvTbRM /tmp/tmp.r2gkT7qMXN
-    ### cat /tmp/tmp.r2gkT7qMXN/zeroes
-
-    real	0m0.740s
-    user	0m0.000s
-    sys	0m0.096s
-
-    ### cat /ipfs/Qmca3PNFKuZnYkiVv1FpcV1AfDUm4qCSHoYjPTBqDAsyk8
+    ### cat /ipfs/QmPZA3FEoW6FF4by9hdy9ic5PRkHac3dFLsfdhpjCafmGt
     ^C # ... and I'm not patient enough
 
 More in depth description
@@ -90,8 +94,3 @@ file access with many small reads there is a risk of cache thrashing.
 If this occurs performance will be much worst than without cache. When
 using the command you can adjust cache size to get best performance (but
 for cache thrashing there is little hope).
-
-Tests
------
-
-    ./test.sh

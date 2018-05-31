@@ -1,28 +1,30 @@
 #!/bin/sh
 
-zeroes=$(dd if=/dev/zero bs=1M count=$1 2>/dev/null | ipfs add --pin=false -Q)
-zeroes_in_dir=$(ipfs object patch add-link $(ipfs object new unixfs-dir) zeroes $zeroes)
+echo "creating ${1}MB of random data and uploading to ipfs ..."
 
-echo "${1}MB of zeroes at:"
-echo -e "\t$zeroes"
-echo -e "\t$zeroes_in_dir/zeroes"
+data=$(dd if=/dev/urandom bs=1M count=$1 2>/dev/null | ipfs add --pin=false -Q)
+data_in_dir=$(ipfs object patch add-link $(ipfs object new unixfs-dir) data $data)
+
+echo "${1}MB of data at:"
+echo -e "\t$data"
+echo -e "\t$data_in_dir/data"
 echo
 
-echo "### ipfs cat $zeroes"
-time { ipfs cat "$zeroes" >/dev/null 2>&1; }
+echo "### ipfs cat $data"
+time { ipfs cat "$data" >/dev/null 2>&1; }
 echo
 
 tmp_mnt=$(mktemp -d)
-echo "### ipfs-api-mount $zeroes_in_dir $tmp_mnt"
-ipfs-api-mount --background "$zeroes_in_dir" "$tmp_mnt"
-echo "### cat $tmp_mnt/zeroes"
-time cat "$tmp_mnt/zeroes" >/dev/null
+echo "### ipfs-api-mount $data_in_dir $tmp_mnt"
+ipfs-api-mount --background "$data_in_dir" "$tmp_mnt"
+echo "### cat $tmp_mnt/data"
+time cat "$tmp_mnt/data" >/dev/null
 fusermount -u "$tmp_mnt"
 echo
 rmdir "$tmp_mnt"
 
-echo "### cat /ipfs/$zeroes"
-time cat "/ipfs/$zeroes" >/dev/null
+echo "### cat /ipfs/$data"
+time cat "/ipfs/$data" >/dev/null
 echo
 
 
