@@ -94,3 +94,9 @@ file access with many small reads there is a risk of cache thrashing.
 If this occurs performance will be much worst than without cache. When
 using the command you can adjust cache size to get best performance (but
 for cache thrashing there is little hope).
+
+See also
+--------
+
+* [Discussion at go-ipfs repo](https://github.com/ipfs/go-ipfs/issues/2166) along with an idea to fix it by adding cache
+* [js-ipfs-mount](https://github.com/piedar/js-ipfs-mount) - similar utility, but written in nodejs
