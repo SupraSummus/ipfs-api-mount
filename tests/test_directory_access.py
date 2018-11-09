@@ -1,4 +1,4 @@
-from .tools import ipfs_file, ipfs_dir
+from .tools import ipfs_dir
 from ipfs_api_mount.ipfs_mounted import ipfs_mounted
 from unittest import TestCase
 import os

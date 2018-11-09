@@ -16,11 +16,12 @@ TYPE_DIR = unixfs_pb2.Data.Directory
 
 class IPFSMount(fuse.Operations):
 
-    def __init__(self,
-        root, # root IPFS path
+    def __init__(
+        self,
+        root,  # root IPFS path
         api_host='127.0.0.1', api_port=5001,
         ls_cache_size=64,
-        object_data_cache_size=256, # ~256MB assuming 1MB max block size
+        object_data_cache_size=256,  # ~256MB assuming 1MB max block size
         object_links_cache_size=256,
         ready=None,  # an event to notify that everything is set-up
     ):
@@ -94,7 +95,7 @@ class IPFSMount(fuse.Operations):
             end = offset
 
             # copy data contained in this object
-            d = data.Data[offset:offset+size]
+            d = data.Data[offset:(offset + size)]
             n = len(d)
             buff[0:n] = d
             end += n
@@ -119,7 +120,7 @@ class IPFSMount(fuse.Operations):
                     end = self._read_into(
                         child_hash,
                         max(0, offset - block_offset),
-                        buff[end-offset:end-offset+blocksize],
+                        buff[(end - offset):(end - offset + blocksize)],
                     ) + block_offset
 
                 # update offset to next block
@@ -153,7 +154,7 @@ class IPFSMount(fuse.Operations):
 
         data = bytearray(size)
         n = self._read_into(self.root + path, offset, memoryview(data))
-        return bytes(data[:n-offset])
+        return bytes(data[:(n - offset)])
 
     def readdir(self, path, fh):
         if self._path_type(self.root + path) != TYPE_DIR:
@@ -171,13 +172,15 @@ class IPFSMount(fuse.Operations):
             'st_mtime': 0,
             'st_gid': 0,
             'st_uid': 0,
-            'st_mode': {
-                TYPE_FILE: stat.S_IFREG,
-                TYPE_DIR: stat.S_IFDIR,
-            }[self._path_type(self.root + path)] |
+            'st_mode': (
+                {
+                    TYPE_FILE: stat.S_IFREG,
+                    TYPE_DIR: stat.S_IFDIR,
+                }[self._path_type(self.root + path)] |
                 stat.S_IRUSR |
                 stat.S_IRGRP |
-                stat.S_IROTH,
+                stat.S_IROTH
+            ),
             'st_nlink': 0,
             'st_size': self._path_size(self.root + path),
         }

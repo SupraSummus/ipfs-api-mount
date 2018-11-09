@@ -1,5 +1,4 @@
 import ipfsapi
-from ipfs_api_mount import IPFSMount
 
 
 host = 'localhost'
@@ -8,7 +7,7 @@ api = ipfsapi.connect(host, port)
 
 
 def ipfs_file(content):
-    return api.add(contet)['Hash']
+    return api.add(content)['Hash']
 
 
 def ipfs_dir(contents):
@@ -16,4 +15,3 @@ def ipfs_dir(contents):
     for name, val in contents.items():
         node = api.object_patch_add_link(node, name, val)['Hash']
     return node
-

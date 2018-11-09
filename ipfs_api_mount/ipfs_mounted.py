@@ -11,6 +11,7 @@ def ipfs_mounted(root, host='localhost', port=5001, multithreaded=False, **kwarg
     with tempfile.TemporaryDirectory() as mountpoint:
         # start fuse thread
         ready = Event()
+
         def _do_fuse_things():
             fuse.FUSE(
                 IPFSMount(
@@ -24,6 +25,7 @@ def ipfs_mounted(root, host='localhost', port=5001, multithreaded=False, **kwarg
                 foreground=True,
                 nothreads=not multithreaded,
             )
+
         fuse_thread = Thread(target=_do_fuse_things)
         fuse_thread.start()
         ready.wait()
