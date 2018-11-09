@@ -22,6 +22,7 @@ class IPFSMount(fuse.Operations):
         ls_cache_size=64,
         object_data_cache_size=256, # ~256MB assuming 1MB max block size
         object_links_cache_size=256,
+        ready=None,  # an event to notify that everything is set-up
     ):
         api = ipfsapi.connect(api_host, api_port)
         self.root = root
@@ -57,6 +58,9 @@ class IPFSMount(fuse.Operations):
         self._ls = ls
         self._object_data = object_data
         self._object_links = object_links
+
+        if ready is not None:
+            ready.set()
 
     def _path_type(self, path):
         data = self._object_data(path)
