@@ -1,6 +1,8 @@
 ipfs-api-mount
 ==============
 
+[![Build Status](https://travis-ci.com/SupraSummus/ipfs-api-mount.svg?branch=master)](https://travis-ci.com/SupraSummus/ipfs-api-mount)
+
 Mount IPFS directory as local FS.
 
 go-ipfs daemon has this function but as of version 0.4.15 it's slow.

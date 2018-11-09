@@ -4,6 +4,7 @@ from threading import Thread, Event
 import fuse
 import subprocess
 import tempfile
+import time
 
 
 @contextmanager
@@ -29,6 +30,7 @@ def ipfs_mounted(root, host='localhost', port=5001, multithreaded=False, **kwarg
         fuse_thread = Thread(target=_do_fuse_things)
         fuse_thread.start()
         ready.wait()
+        time.sleep(1)  # meh, dirty
 
         # do wrapped things
         yield mountpoint
@@ -36,5 +38,5 @@ def ipfs_mounted(root, host='localhost', port=5001, multithreaded=False, **kwarg
         # stop fuse thread
         # TODO - fuse_exit() has global effects, so locking/more precise termination is needed
         # fuse.fuse_exit() <- causes segafult, so not using it
-        subprocess.run(['fusermount', '-u', mountpoint])
+        subprocess.run(['fusermount', '-u', mountpoint], check=True)
         fuse_thread.join()
