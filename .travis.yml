@@ -1,0 +1,21 @@
+language: python
+python:
+  - "3.6"
+before_install:
+  - sudo apt-get install -qq pkg-config fuse
+  - sudo modprobe fuse
+  - sudo chmod 666 /dev/fuse
+  - sudo chown root:$USER /etc/fuse.conf
+install:
+  - pip install -r requirements.txt
+  - curl https://dist.ipfs.io/go-ipfs/v0.4.18/go-ipfs_v0.4.18_linux-amd64.tar.gz | tar xvz
+  - curl -L https://github.com/protocolbuffers/protobuf/releases/download/v3.6.1/protoc-3.6.1-linux-x86_64.zip > protoc.zip
+  - sudo unzip -d /usr/local protoc.zip
+  - python setup.py build
+script:
+  - flake8
+  - ./go-ipfs/ipfs daemon --offline --init &
+  - IPFS_PID=$!
+  - sleep 10
+  - python setup.py test
+  - kill $IPFS_PID

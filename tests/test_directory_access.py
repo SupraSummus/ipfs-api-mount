@@ -12,3 +12,14 @@ class DirectoryTestCase(TestCase):
                 os.listdir(mountpoint),
                 [],
             )
+
+    def test_nonempty_dir(self):
+        root = ipfs_dir({
+            'aaa': ipfs_dir({}),
+            'bbb': ipfs_dir({}),
+        })
+        with ipfs_mounted(root) as mountpoint:
+            self.assertEqual(
+                os.listdir(mountpoint),
+                ['aaa', 'bbb'],
+            )
