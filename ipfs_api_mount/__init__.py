@@ -15,6 +15,7 @@ TYPE_DIR = unixfs_pb2.Data.Directory
 
 
 class IPFSMount(fuse.Operations):
+    use_ns = True
 
     def __init__(
         self,

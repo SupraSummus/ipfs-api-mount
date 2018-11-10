@@ -24,6 +24,17 @@ class DirectoryTestCase(TestCase):
                 ['aaa', 'bbb'],
             )
 
+    def test_file_times(self):
+        """creation/modification/access times for a file are all 0"""
+        root = ipfs_dir({
+            'bbb': ipfs_file(b'blabla'),
+        })
+        with ipfs_mounted(root) as mountpoint:
+            s = os.stat(os.path.join(mountpoint, 'bbb'))
+            self.assertEqual(s.st_ctime, 0)
+            self.assertEqual(s.st_mtime, 0)
+            self.assertEqual(s.st_atime, 0)
+
 
 class FileTestCase(TestCase):
     def test_small_file_read(self):
