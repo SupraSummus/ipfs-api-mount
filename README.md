@@ -2,6 +2,7 @@ ipfs-api-mount
 ==============
 
 [![Build Status](https://travis-ci.com/SupraSummus/ipfs-api-mount.svg?branch=master)](https://travis-ci.com/SupraSummus/ipfs-api-mount)
+[![codecov](https://codecov.io/gh/SupraSummus/ipfs-api-mount/branch/master/graph/badge.svg)](https://codecov.io/gh/SupraSummus/ipfs-api-mount)
 
 Mount IPFS directory as local FS.
 
