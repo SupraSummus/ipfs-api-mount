@@ -7,7 +7,7 @@ api = ipfsapi.connect(host, port)
 
 
 def ipfs_file(content):
-    return api.add_bytes(content)['Hash']
+    return api.add_bytes(content)
 
 
 def ipfs_dir(contents):
