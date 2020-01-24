@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 from functools import lru_cache
 import errno
 import os
