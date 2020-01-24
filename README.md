@@ -6,7 +6,7 @@ ipfs-api-mount
 
 Mount IPFS directory as local FS.
 
-go-ipfs daemon has this function but as of version 0.4.15 it's slow.
+go-ipfs daemon has this function but as of version 0.4.22 it's slow.
 `ipfs-api-mount` aims to be more efficient. For sequential access to
 random data it's ~3 times slower than `ipfs cat` but also ~20 times
 faster than `cat`ing files mounted by go-ipfs.
@@ -38,54 +38,33 @@ Benchmark
 
 Try it yourself and run `./benchamrk [number of Mbytes]`.
 
-Output at my puny (intel atom, EMMC storage) machine with go-ipfs 0.4.15:
+Example output:
 
-    [jan@aaa ipfs-api-mount]$ ./benchmark.sh 10
+    [jan@bubel ipfs-api-mount]$ ./benchmark.sh 10
+    ipfs version 0.4.22
     creating 10MB of random data and uploading to ipfs ...
     10MB of data at:
-        Qmbum4ndB5qsGid7FK6t2LSzrzmr3SoXytncR7xLaAFmAj
-        Qmbnkzrpx8gDz72iL3yKkHuZKtvNDJacg4gaeNgV97fAUn/data
+        QmP3YepbcGX8PXST3NYjXDjwAscrD8poT4YA2wJudpea8W
+        QmTfmg74kWcmqum1LaJHhK4j7M8GUv1k2XfcQpUPViCe35/data
 
-    ### ipfs cat Qmbum4ndB5qsGid7FK6t2LSzrzmr3SoXytncR7xLaAFmAj
+    ### ipfs cat QmP3YepbcGX8PXST3NYjXDjwAscrD8poT4YA2wJudpea8W
 
-    real	0m0.524s
-    user	0m0.195s
-    sys	0m0.182s
+    real	0m0.091s
+    user	0m0.024s
+    sys	0m0.045s
 
-    ### ipfs-api-mount Qmbnkzrpx8gDz72iL3yKkHuZKtvNDJacg4gaeNgV97fAUn /tmp/tmp.M9dyRJfZcp
-    ### cat /tmp/tmp.M9dyRJfZcp/data
+    ### ipfs-api-mount QmTfmg74kWcmqum1LaJHhK4j7M8GUv1k2XfcQpUPViCe35 /tmp/tmp.Adw8sn8My2
+    ### cat /tmp/tmp.Adw8sn8My2/data
 
-    real	0m1.046s
-    user	0m0.001s
-    sys	0m0.019s
+    real	0m0.189s
+    user	0m0.006s
+    sys	0m0.000s
 
-    ### cat /ipfs/Qmbum4ndB5qsGid7FK6t2LSzrzmr3SoXytncR7xLaAFmAj
+    ### cat /ipfs/QmP3YepbcGX8PXST3NYjXDjwAscrD8poT4YA2wJudpea8W
 
-    real	0m20.062s
-    user	0m0.001s
-    sys	0m0.192s
-
-    [jan@aaa ipfs-api-mount]$ ./benchmark.sh 100
-    creating 100MB of random data and uploading to ipfs ...
-    100MB of data at:
-        QmPZA3FEoW6FF4by9hdy9ic5PRkHac3dFLsfdhpjCafmGt
-        QmWx4dpofRWLKswogzQUvAzX6oi6nEd9fMMe5AD23ECHy1/data
-
-    ### ipfs cat QmPZA3FEoW6FF4by9hdy9ic5PRkHac3dFLsfdhpjCafmGt
-
-    real	0m3.907s
-    user	0m0.718s
-    sys	0m1.322s
-
-    ### ipfs-api-mount QmWx4dpofRWLKswogzQUvAzX6oi6nEd9fMMe5AD23ECHy1 /tmp/tmp.OGyZXMNSwV
-    ### cat /tmp/tmp.OGyZXMNSwV/data
-
-    real	0m9.575s
+    real	0m5.949s
     user	0m0.000s
-    sys	0m0.171s
-
-    ### cat /ipfs/QmPZA3FEoW6FF4by9hdy9ic5PRkHac3dFLsfdhpjCafmGt
-    ^C # ... and I'm not patient enough
+    sys	0m0.084s
 
 More in depth description
 -------------------------

@@ -1,5 +1,10 @@
 #!/bin/sh
 
+# abort on any error
+set -e
+
+ipfs version
+
 echo "creating ${1}MB of random data and uploading to ipfs ..."
 
 data=$(dd if=/dev/urandom bs=1M count=$1 2>/dev/null | ipfs add --pin=false -Q)
