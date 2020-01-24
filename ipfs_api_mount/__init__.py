@@ -1,7 +1,6 @@
 from functools import lru_cache
 import errno
 import os
-import socket
 import stat
 
 import fuse
@@ -19,17 +18,17 @@ class IPFSMount(fuse.Operations):
     def __init__(
         self,
         root,  # root IPFS path
-        api_host='127.0.0.1', api_port=5001,
+        ipfs_client,  # ipfshttpclient client instance
         ls_cache_size=64,
         object_data_cache_size=256,  # ~256MB assuming 1MB max block size
         object_links_cache_size=256,
         ready=None,  # an event to notify that everything is set-up
     ):
-        ip = socket.gethostbyname(api_host)
-        api = ipfshttpclient.connect('/ip4/{}/tcp/{}/http'.format(ip, api_port))
         self.root = root
 
         # trick to get lrucache use only one arg
+
+        api = ipfs_client
 
         @lru_cache(maxsize=object_data_cache_size)
         def object_data(object_id):
