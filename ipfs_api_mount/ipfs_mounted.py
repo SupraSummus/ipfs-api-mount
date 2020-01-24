@@ -8,7 +8,7 @@ import time
 
 
 @contextmanager
-def ipfs_mounted(root, host='localhost', port=5001, multithreaded=False, **kwargs):
+def ipfs_mounted(root, ipfs_client, multithreaded=False, **kwargs):
     with tempfile.TemporaryDirectory() as mountpoint:
         # start fuse thread
         ready = Event()
@@ -17,8 +17,7 @@ def ipfs_mounted(root, host='localhost', port=5001, multithreaded=False, **kwarg
             fuse.FUSE(
                 IPFSMount(
                     root,
-                    api_host=host,
-                    api_port=port,
+                    ipfs_client,
                     ready=ready,
                     **kwargs,
                 ),

@@ -1,8 +1,10 @@
 #!/usr/bin/env python
 
 import argparse
+import socket
 
 import fuse
+import ipfshttpclient
 
 from ipfs_api_mount import IPFSMount
 
@@ -21,16 +23,21 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    fuse.FUSE(
-        IPFSMount(
-            args.root,
-            ls_cache_size=args.ls_cache_size,
-            object_data_cache_size=args.object_data_cache_size,
-            object_links_cache_size=args.object_links_cache_size,
-            api_host=args.api_host,
-            api_port=args.api_port,
-        ),
-        args.mountpoint,
-        foreground=not args.background,
-        nothreads=not args.multithreaded,
-    )
+    ip = socket.gethostbyname(args.api_host)
+
+    with ipfshttpclient.connect(
+        '/ip4/{}/tcp/{}/http'.format(ip, args.api_port)
+    ) as client:
+
+        fuse.FUSE(
+            IPFSMount(
+                args.root,
+                client,
+                ls_cache_size=args.ls_cache_size,
+                object_data_cache_size=args.object_data_cache_size,
+                object_links_cache_size=args.object_links_cache_size,
+            ),
+            args.mountpoint,
+            foreground=not args.background,
+            nothreads=not args.multithreaded,
+        )
