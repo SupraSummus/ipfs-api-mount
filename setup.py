@@ -35,7 +35,7 @@ setup(
     keywords='ipfs fuse mount fs',
     install_requires=[
         'fusepy==3.0.*',
-        'ipfsapi==0.4.*',
+        'ipfshttpclient==0.4.*',
         'protobuf==3.6.*',
     ],
     packages=['ipfs_api_mount'],
