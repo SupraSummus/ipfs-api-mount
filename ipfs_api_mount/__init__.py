@@ -3,7 +3,7 @@ import errno
 import os
 import stat
 
-import fuse
+from refuse import high as fuse
 import ipfshttpclient
 
 from . import unixfs_pb2

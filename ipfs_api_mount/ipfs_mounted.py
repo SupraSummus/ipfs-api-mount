@@ -4,7 +4,7 @@ import subprocess
 import tempfile
 import time
 
-import fuse
+from refuse import high as fuse
 
 from . import IPFSMount
 
