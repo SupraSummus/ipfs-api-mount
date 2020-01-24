@@ -12,6 +12,10 @@ TYPE_FILE = unixfs_pb2.Data.File
 TYPE_DIR = unixfs_pb2.Data.Directory
 
 
+class InvalidIPFSPathException(Exception):
+    pass
+
+
 class IPFSMount(fuse.Operations):
     use_ns = True
 
@@ -36,7 +40,7 @@ class IPFSMount(fuse.Operations):
                 data = unixfs_pb2.Data()
                 data.ParseFromString(api.object.data(object_id))
                 return data
-            except ipfshttpclient.exceptions.Error:
+            except ipfshttpclient.exceptions.StatusError:
                 return None
 
         @lru_cache(maxsize=object_links_cache_size)
@@ -46,7 +50,7 @@ class IPFSMount(fuse.Operations):
                     l['Hash']
                     for l in api.object.links(object_id).get('Links', [])
                 ]
-            except ipfshttpclient.exceptions.Error:
+            except ipfshttpclient.exceptions.StatusError:
                 return None
 
         @lru_cache(maxsize=ls_cache_size)
@@ -62,6 +66,13 @@ class IPFSMount(fuse.Operations):
 
         if ready is not None:
             ready.set()
+
+        # this shouldn't be called before `ready` is set because it may throw an exception and hang forever
+        self._validate_root_path()
+
+    def _validate_root_path(self):
+        if self._path_type(self.root) != TYPE_DIR:
+            raise InvalidIPFSPathException("root path is not a directory")
 
     def _path_type(self, path):
         data = self._object_data(path)

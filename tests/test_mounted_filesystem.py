@@ -1,7 +1,10 @@
-from .tools import ipfs_client, ipfs_dir, ipfs_file
-from ipfs_api_mount.ipfs_mounted import ipfs_mounted
 from unittest import TestCase
 import os
+
+from ipfs_api_mount import InvalidIPFSPathException
+from ipfs_api_mount.ipfs_mounted import ipfs_mounted
+
+from .tools import ipfs_client, ipfs_dir, ipfs_file
 
 
 class DirectoryTestCase(TestCase):
@@ -56,3 +59,36 @@ class FileTestCase(TestCase):
                     f.read(),
                     content,
                 )
+
+
+class ErrorsTestCase(TestCase):
+    def test_invalid_root_hash(self):
+        """ we should refuse to mount invalid hash """
+        with self.assertRaises(InvalidIPFSPathException):
+            with ipfs_mounted('straight/to/nonsense', ipfs_client):
+                pass
+
+    def test_file_root_hash(self):
+        """ we should refuse to mount something that is a file (dir is needed) """
+        root = ipfs_file(b'definetly not a dir')
+        with self.assertRaises(InvalidIPFSPathException):
+            with ipfs_mounted(root, ipfs_client):
+                pass
+
+    def test_complex_root_hash(self):
+        root = ipfs_dir({
+            'nested_dir': ipfs_dir({
+                'empty_dir': ipfs_dir({}),
+            }),
+        })
+        with ipfs_mounted(root + '/nested_dir', ipfs_client) as mountpoint:
+            self.assertEqual(
+                os.listdir(mountpoint),
+                ['empty_dir'],
+            )
+
+    def test_nonexistent_file(self):
+        root = ipfs_dir({})
+        with ipfs_mounted(root, ipfs_client) as mountpoint:
+            with self.assertRaises(FileNotFoundError):
+                open(os.path.join(mountpoint, 'a_file'), 'rb')
