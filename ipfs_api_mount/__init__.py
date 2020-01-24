@@ -8,9 +8,6 @@ import ipfshttpclient
 
 from . import unixfs_pb2
 
-TYPE_FILE = unixfs_pb2.Data.File
-TYPE_DIR = unixfs_pb2.Data.Directory
-
 
 class InvalidIPFSPathException(Exception):
     pass
@@ -71,7 +68,7 @@ class IPFSMount(fuse.Operations):
         self._validate_root_path()
 
     def _validate_root_path(self):
-        if self._path_type(self.root) != TYPE_DIR:
+        if not self._path_is_dir(self.root):
             raise InvalidIPFSPathException("root path is not a directory")
 
     def _path_type(self, path):
@@ -80,6 +77,20 @@ class IPFSMount(fuse.Operations):
             return None
         else:
             return data.Type
+
+    def _path_is_dir(self, path):
+        return self._path_type(path) in (
+            unixfs_pb2.Data.Directory,
+            unixfs_pb2.Data.HAMTShard,
+        )
+
+    def _path_is_file(self, path):
+        return self._path_type(path) in (
+            unixfs_pb2.Data.File,
+        )
+
+    def _path_exists(self, path):
+        return self._path_is_dir(path) or self._path_is_file(path)
 
     def _path_size(self, path):
         data = self._object_data(path)
@@ -153,29 +164,37 @@ class IPFSMount(fuse.Operations):
         )
         if (flags & write_flags) != 0:
             raise fuse.FuseOSError(errno.EROFS)
-        elif self._path_type(self.root + path) not in (TYPE_DIR, TYPE_FILE):
+        elif not self._path_exists(self.root + path):
             raise fuse.FuseOSError(errno.ENOENT)
 
         # we dont use file handles so return anthing
         return 0
 
     def read(self, path, size, offset, fh):
-        if self._path_type(self.root + path) != TYPE_FILE:
+        if self._path_is_dir(self.root + path):
             raise fuse.FuseOSError(errno.EISDIR)
+        elif not self._path_is_file(self.root + path):
+            raise fuse.FuseOSError(errno.ENOENT)
 
         data = bytearray(size)
         n = self._read_into(self.root + path, offset, memoryview(data))
         return bytes(data[:(n - offset)])
 
     def readdir(self, path, fh):
-        if self._path_type(self.root + path) != TYPE_DIR:
+        if not self._path_is_dir(self.root + path):
             raise fuse.FuseOSError(errno.ENOTDIR)
 
         return ['.', '..'] + list(self._ls(self.root + path).keys())
 
     def getattr(self, path, fh=None):
-        if self._path_type(self.root + path) not in (TYPE_DIR, TYPE_FILE):
+        if self._path_is_dir(self.root + path):
+            st_mode = stat.S_IFDIR
+        elif self._path_is_file(self.root + path):
+            st_mode = stat.S_IFREG
+        else:
             raise fuse.FuseOSError(errno.ENOENT)
+
+        st_mode |= stat.S_IRUSR | stat.S_IRGRP | stat.S_IROTH
 
         return {
             'st_atime': 0,
@@ -183,15 +202,7 @@ class IPFSMount(fuse.Operations):
             'st_mtime': 0,
             'st_gid': 0,
             'st_uid': 0,
-            'st_mode': (
-                {
-                    TYPE_FILE: stat.S_IFREG,
-                    TYPE_DIR: stat.S_IFDIR,
-                }[self._path_type(self.root + path)] |
-                stat.S_IRUSR |
-                stat.S_IRGRP |
-                stat.S_IROTH
-            ),
+            'st_mode': st_mode,
             'st_nlink': 0,
             'st_size': self._path_size(self.root + path),
         }
