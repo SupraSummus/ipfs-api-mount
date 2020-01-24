@@ -1,12 +1,13 @@
 #!/usr/bin/env python
 
-import errno
 from functools import lru_cache
+import errno
 import os
+import socket
 import stat
 
 import fuse
-import ipfsapi
+import ipfshttpclient
 
 from . import unixfs_pb2
 
@@ -26,7 +27,8 @@ class IPFSMount(fuse.Operations):
         object_links_cache_size=256,
         ready=None,  # an event to notify that everything is set-up
     ):
-        api = ipfsapi.connect(api_host, api_port)
+        ip = socket.gethostbyname(api_host)
+        api = ipfshttpclient.connect('/ip4/{}/tcp/{}/http'.format(ip, api_port))
         self.root = root
 
         # trick to get lrucache use only one arg
@@ -35,9 +37,9 @@ class IPFSMount(fuse.Operations):
         def object_data(object_id):
             try:
                 data = unixfs_pb2.Data()
-                data.ParseFromString(api.object_data(object_id))
+                data.ParseFromString(api.object.data(object_id))
                 return data
-            except ipfsapi.exceptions.Error:
+            except ipfshttpclient.exceptions.Error:
                 return None
 
         @lru_cache(maxsize=object_links_cache_size)
@@ -45,9 +47,9 @@ class IPFSMount(fuse.Operations):
             try:
                 return [
                     l['Hash']
-                    for l in api.object_links(object_id).get('Links', [])
+                    for l in api.object.links(object_id).get('Links', [])
                 ]
-            except ipfsapi.exceptions.Error:
+            except ipfshttpclient.exceptions.Error:
                 return None
 
         @lru_cache(maxsize=ls_cache_size)

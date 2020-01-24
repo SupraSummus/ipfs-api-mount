@@ -1,9 +1,7 @@
-import ipfsapi
+import ipfshttpclient
 
 
-host = 'localhost'
-port = '5001'
-api = ipfsapi.connect(host, port)
+api = ipfshttpclient.connect('/ip4/127.0.0.1/tcp/5001/http')
 
 
 def ipfs_file(content):
@@ -11,7 +9,7 @@ def ipfs_file(content):
 
 
 def ipfs_dir(contents):
-    node = api.object_new(template='unixfs-dir')['Hash']
+    node = api.object.new(template='unixfs-dir')['Hash']
     for name, val in contents.items():
-        node = api.object_patch_add_link(node, name, val)['Hash']
+        node = api.object.patch.add_link(node, name, val)['Hash']
     return node
