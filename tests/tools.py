@@ -6,12 +6,12 @@ import ipfshttpclient
 ipfs_client = ipfshttpclient.connect('/ip4/127.0.0.1/tcp/5001/http')
 
 
-def ipfs_file(content):
+def ipfs_file(content, **kwargs):
     # workaround for https://github.com/ipfs/py-ipfs-http-client/issues/187
     with tempfile.NamedTemporaryFile() as f:
         f.write(content)
         f.flush()
-        return ipfs_client.add(f.name)['Hash']
+        return ipfs_client.add(f.name, **kwargs)['Hash']
 
 
 def ipfs_dir(contents):

@@ -1,12 +1,17 @@
 from functools import lru_cache
 import errno
+import logging
 import os
 import stat
 
 import fuse
 import ipfshttpclient
+import multibase
 
 from . import unixfs_pb2
+
+
+logger = logging.getLogger(__name__)
 
 
 class InvalidIPFSPathException(Exception):
@@ -21,7 +26,7 @@ class IPFSMount(fuse.Operations):
         root,  # root IPFS path
         ipfs_client,  # ipfshttpclient client instance
         ls_cache_size=64,
-        object_data_cache_size=256,  # ~256MB assuming 1MB max block size
+        object_data_cache_size=256,  # 2 * ~256MB assuming 1MB max block size
         object_links_cache_size=256,
         ready=None,  # an event to notify that everything is set-up
     ):
@@ -31,14 +36,49 @@ class IPFSMount(fuse.Operations):
 
         api = ipfs_client
 
+        @lru_cache(maxsize=1024)
+        def resolve_path(object_path):
+            try:
+                absolute_path = api.resolve(object_path)['Path']
+
+            except ipfshttpclient.exceptions.ErrorResponse as e:
+                raise InvalidIPFSPathException(
+                    "couldn't resolve object at path {}".format(object_path),
+                ) from e
+
+            except ipfshttpclient.exceptions.TimeoutError as e:
+                logger.warning('timeout while resolving path %s', object_path)
+                raise fuse.FuseOSError(errno.EAGAIN) from e
+
+            if not absolute_path.startswith('/ipfs/'):
+                raise InvalidIPFSPathException()
+            return absolute_path[6:]
+
         @lru_cache(maxsize=object_data_cache_size)
         def object_data(object_id):
             try:
                 data = unixfs_pb2.Data()
                 data.ParseFromString(api.object.data(object_id))
                 return data
-            except ipfshttpclient.exceptions.StatusError:
+
+            except ipfshttpclient.exceptions.ErrorResponse:
                 return None
+
+            except ipfshttpclient.exceptions.TimeoutError:
+                logger.warning('timeout while reading object data %s', object_id)
+                raise fuse.FuseOSError(errno.EAGAIN)
+
+        @lru_cache(maxsize=object_data_cache_size)
+        def block_data(cid):
+            try:
+                return api.block.get(cid)
+
+            except ipfshttpclient.exceptions.ErrorResponse as e:
+                raise InvalidIPFSPathException() from e
+
+            except ipfshttpclient.exceptions.TimeoutError as e:
+                logger.warning('timeout while reading block %s', cid)
+                raise fuse.FuseOSError(errno.EAGAIN) from e
 
         @lru_cache(maxsize=object_links_cache_size)
         def object_links(object_id):
@@ -47,18 +87,33 @@ class IPFSMount(fuse.Operations):
                     l['Hash']
                     for l in api.object.links(object_id).get('Links', [])
                 ]
-            except ipfshttpclient.exceptions.StatusError:
+
+            except ipfshttpclient.exceptions.ErrorResponse:
                 return None
 
-        @lru_cache(maxsize=ls_cache_size)
-        def ls(object_id):
-            return {
-                entry['Name']: entry
-                for entry in api.ls(object_id)['Objects'][0]['Links']
-            }
+            except ipfshttpclient.exceptions.TimeoutError:
+                logger.warning('timeout while reading object links %s', object_id)
+                raise fuse.FuseOSError(errno.EAGAIN)
 
+        @lru_cache(maxsize=ls_cache_size)
+        def ls(object_path):
+            try:
+                return {
+                    entry['Name']: entry
+                    for entry in api.ls(object_path)['Objects'][0]['Links']
+                }
+
+            except ipfshttpclient.exceptions.ErrorResponse:
+                return None
+
+            except ipfshttpclient.exceptions.TimeoutError:
+                logger.warning('timeout while doing ls for %s', object_path)
+                raise fuse.FuseOSError(errno.EAGAIN)
+
+        self._resolve_path = resolve_path
         self._ls = ls
         self._object_data = object_data
+        self._block_data = block_data
         self._object_links = object_links
 
         if ready is not None:
@@ -72,7 +127,8 @@ class IPFSMount(fuse.Operations):
             raise InvalidIPFSPathException("root path is not a directory")
 
     def _path_type(self, path):
-        data = self._object_data(path)
+        object_id = self._resolve_path(path)
+        data = self._object_data(object_id)
         if data is None:
             return None
         else:
@@ -89,22 +145,45 @@ class IPFSMount(fuse.Operations):
             unixfs_pb2.Data.File,
         )
 
-    def _path_exists(self, path):
-        return self._path_is_dir(path) or self._path_is_file(path)
-
     def _path_size(self, path):
-        data = self._object_data(path)
+        object_id = self._resolve_path(path)
+        data = self._object_data(object_id)
         if data is None:
             return None
         else:
             return data.filesize
 
     def _read_into(self, object_hash, offset, buff):
-        """ Read bytes begining at `offset` from given object into
+        """ Read bytes begining at `offset` from given object/raw into
         buffer. Returns end offset of copied data. """
 
         assert(offset >= 0)
 
+        if object_hash.startswith('Q'):
+            # this is an v0 object
+            return self._read_object_into(object_hash, offset, buff)
+
+        try:
+            obj_hash_bytes = multibase.decode(object_hash)
+        except ValueError:
+            logger.exception("encountered malformed object/block id")
+            return offset
+
+        if obj_hash_bytes.startswith(bytes([0x01, 0x55])):
+            # this is a v1 raw leaf
+            return self._read_raw_into(object_hash, offset, buff)
+
+        logger.warning("unknown type of object (cid %s)", object_hash)
+        return offset
+
+    def _read_raw_into(self, block_id, offset, buff):
+        size = len(buff)
+        data = self._block_data(block_id)[offset:(offset + size)]
+        n = len(data)
+        buff[:n] = data
+        return offset + n
+
+    def _read_object_into(self, object_hash, offset, buff):
         data = self._object_data(object_hash)
         size = len(buff)
 
@@ -164,35 +243,51 @@ class IPFSMount(fuse.Operations):
         )
         if (flags & write_flags) != 0:
             raise fuse.FuseOSError(errno.EROFS)
-        elif not self._path_exists(self.root + path):
-            raise fuse.FuseOSError(errno.ENOENT)
+
+        try:
+            full_path = self.root + path
+            if not self._path_is_dir(full_path) and not self._path_is_file(full_path):
+                logger.warning('strange entity type at %s', full_path)
+                fuse.FuseOSError(errno.ENOENT)
+        except InvalidIPFSPathException as e:
+            raise fuse.FuseOSError(errno.ENOENT) from e
 
         # we dont use file handles so return anthing
         return 0
 
     def read(self, path, size, offset, fh):
-        if self._path_is_dir(self.root + path):
-            raise fuse.FuseOSError(errno.EISDIR)
-        elif not self._path_is_file(self.root + path):
-            raise fuse.FuseOSError(errno.ENOENT)
+        try:
+            if self._path_is_dir(self.root + path):
+                raise fuse.FuseOSError(errno.EISDIR)
+            elif not self._path_is_file(self.root + path):
+                raise fuse.FuseOSError(errno.ENOENT)
+        except InvalidIPFSPathException as e:
+            raise fuse.FuseOSError(errno.ENOENT) from e
 
         data = bytearray(size)
-        n = self._read_into(self.root + path, offset, memoryview(data))
+        n = self._read_into(
+            self._resolve_path(self.root + path),
+            offset, memoryview(data),
+        )
         return bytes(data[:(n - offset)])
 
     def readdir(self, path, fh):
-        if not self._path_is_dir(self.root + path):
+        ls_result = self._ls(self.root + path)
+        if ls_result is None:
             raise fuse.FuseOSError(errno.ENOTDIR)
 
-        return ['.', '..'] + list(self._ls(self.root + path).keys())
+        return ['.', '..'] + list(ls_result.keys())
 
     def getattr(self, path, fh=None):
-        if self._path_is_dir(self.root + path):
-            st_mode = stat.S_IFDIR
-        elif self._path_is_file(self.root + path):
-            st_mode = stat.S_IFREG
-        else:
-            raise fuse.FuseOSError(errno.ENOENT)
+        try:
+            if self._path_is_dir(self.root + path):
+                st_mode = stat.S_IFDIR
+            elif self._path_is_file(self.root + path):
+                st_mode = stat.S_IFREG
+            else:
+                raise fuse.FuseOSError(errno.ENOENT)
+        except InvalidIPFSPathException as e:
+            raise fuse.FuseOSError(errno.ENOENT) from e
 
         st_mode |= stat.S_IRUSR | stat.S_IRGRP | stat.S_IROTH
 

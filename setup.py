@@ -37,6 +37,7 @@ setup(
         'fusepy==3.0.*',
         'ipfshttpclient==0.4.*',
         'protobuf==3.6.*',
+        'py-multibase==1.*',
     ],
     packages=['ipfs_api_mount'],
     scripts=['bin/ipfs-api-mount'],

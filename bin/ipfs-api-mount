@@ -1,7 +1,9 @@
 #!/usr/bin/env python
 
 import argparse
+import logging
 import socket
+import sys
 
 import fuse
 import ipfshttpclient
@@ -21,7 +23,27 @@ if __name__ == '__main__':
     parser.add_argument('root', type=str, help='Hash of IPFS dir to be mounted.')
     parser.add_argument('mountpoint', type=str, help='Local mountpoint path.')
 
+    parser.add_argument(
+        "-l", "--log",
+        dest='log', default=sys.stderr, type=argparse.FileType('w'),
+        help="where to put logs, use something like /proc/self/fd/5 for logging to custom fd",
+    )
+    parser.add_argument(
+        "-v", "--verbose",
+        dest='verbose_count', action='count', default=0,
+        help="increases log verbosity for each occurence",
+    )
+
     args = parser.parse_args()
+
+    # Sets log level to WARN going more verbose for each new -v.
+    logging.basicConfig(
+        format='%(process)d %(levelname)s: %(message)s',
+        level=max(3 - args.verbose_count, 0) * 10,
+        stream=args.log,
+    )
+
+    logging.info('starting ipfs-api-mount with commandline %s', str(sys.argv))
 
     ip = socket.gethostbyname(args.api_host)
 
@@ -40,4 +62,5 @@ if __name__ == '__main__':
             args.mountpoint,
             foreground=not args.background,
             nothreads=not args.multithreaded,
+            auto_unmount=True,
         )
