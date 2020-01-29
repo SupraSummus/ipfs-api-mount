@@ -60,6 +60,16 @@ class FileTestCase(TestCase):
                     content,
                 )
 
+    def test_raw_leaves_small_file_read(self):
+        content = b'precious'
+        root = ipfs_dir({'file': ipfs_file(content, raw_leaves=True)})
+        with ipfs_mounted(root, ipfs_client) as mountpoint:
+            with open(os.path.join(mountpoint, 'file'), 'rb') as f:
+                self.assertEqual(
+                    f.read(),
+                    content,
+                )
+
     def test_raw_leaves_10MiB_file(self):
         content = os.urandom(10 * 1024 * 1024)
         root = ipfs_dir({'file': ipfs_file(content, raw_leaves=True)})

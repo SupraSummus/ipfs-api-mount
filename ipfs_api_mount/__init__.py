@@ -36,7 +36,7 @@ class IPFSMount(fuse.Operations):
 
         api = ipfs_client
 
-        @lru_cache(maxsize=1024)
+        @lru_cache(maxsize=1024 * 10)
         def resolve_path(object_path):
             try:
                 absolute_path = api.resolve(object_path)['Path']
@@ -80,6 +80,18 @@ class IPFSMount(fuse.Operations):
                 logger.warning('timeout while reading block %s', cid)
                 raise fuse.FuseOSError(errno.EAGAIN) from e
 
+        @lru_cache(maxsize=1024 * 10)
+        def block_size(cid):
+            try:
+                return api.block.stat(cid)['Size']
+
+            except ipfshttpclient.exceptions.ErrorResponse as e:
+                raise InvalidIPFSPathException() from e
+
+            except ipfshttpclient.exceptions.TimeoutError as e:
+                logger.warning('timeout while doing stat for block %s', cid)
+                raise fuse.FuseOSError(errno.EAGAIN) from e
+
         @lru_cache(maxsize=object_links_cache_size)
         def object_links(object_id):
             try:
@@ -114,6 +126,7 @@ class IPFSMount(fuse.Operations):
         self._ls = ls
         self._object_data = object_data
         self._block_data = block_data
+        self._block_size = block_size
         self._object_links = object_links
 
         if ready is not None:
@@ -126,32 +139,56 @@ class IPFSMount(fuse.Operations):
         if not self._path_is_dir(self.root):
             raise InvalidIPFSPathException("root path is not a directory")
 
-    def _path_type(self, path):
-        object_id = self._resolve_path(path)
+    def _object_type(self, object_id):
         data = self._object_data(object_id)
         if data is None:
             return None
         else:
             return data.Type
 
+    def _is_raw_block(self, cid):
+        try:
+            cid_bytes = multibase.decode(cid)
+        except ValueError:
+            logger.exception("encountered malformed object/block id")
+            return False
+
+        return cid_bytes.startswith(bytes([0x01, 0x55]))
+
     def _path_is_dir(self, path):
-        return self._path_type(path) in (
+        cid = self._resolve_path(path)
+        return self._object_type(cid) in (
             unixfs_pb2.Data.Directory,
             unixfs_pb2.Data.HAMTShard,
         )
 
     def _path_is_file(self, path):
-        return self._path_type(path) in (
-            unixfs_pb2.Data.File,
-        )
+        cid = self._resolve_path(path)
+        if cid.startswith('Q'):
+            # v0 object
+            return self._object_type(cid) in (
+                unixfs_pb2.Data.File,
+            )
+
+        return self._is_raw_block(cid)
 
     def _path_size(self, path):
-        object_id = self._resolve_path(path)
-        data = self._object_data(object_id)
-        if data is None:
-            return None
-        else:
-            return data.filesize
+        cid = self._resolve_path(path)
+
+        if cid.startswith('Q'):
+            # v0 object
+            data = self._object_data(cid)
+            if data is None:
+                return None
+            else:
+                return data.filesize
+
+        if self._is_raw_block(cid):
+            # v1 raw block
+            return self._block_size(cid)
+
+        # unknown object type
+        raise InvalidIPFSPathException()
 
     def _read_into(self, object_hash, offset, buff):
         """ Read bytes begining at `offset` from given object/raw into
@@ -163,13 +200,7 @@ class IPFSMount(fuse.Operations):
             # this is an v0 object
             return self._read_object_into(object_hash, offset, buff)
 
-        try:
-            obj_hash_bytes = multibase.decode(object_hash)
-        except ValueError:
-            logger.exception("encountered malformed object/block id")
-            return offset
-
-        if obj_hash_bytes.startswith(bytes([0x01, 0x55])):
+        if self._is_raw_block(object_hash):
             # this is a v1 raw leaf
             return self._read_raw_into(object_hash, offset, buff)
 
