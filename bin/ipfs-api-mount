@@ -14,7 +14,7 @@ from ipfs_api_mount import IPFSMount
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Mount specified IPFS directory as local FS.')
     parser.add_argument('--ls-cache-size', type=int, default=64, help='Max number of ls results kept in cache.')
-    parser.add_argument('--object-data-cache-size', type=int, default=256, help='Max number of object data secrions kept in cache.')
+    parser.add_argument('--object-data-cache-size', type=int, default=256, help='Max number of object data sections kept in cache.')
     parser.add_argument('--object-links-cache-size', type=int, default=256, help='Max number of object link sections kept in cache.')
     parser.add_argument('-b', '--background', action='store_true', help='Run in background.')
     parser.add_argument('-m', '--multithreaded', action='store_true', help='Use multiple threads to handle FS requests.')
@@ -31,7 +31,7 @@ if __name__ == '__main__':
     parser.add_argument(
         "-v", "--verbose",
         dest='verbose_count', action='count', default=0,
-        help="increases log verbosity for each occurence",
+        help="increases log verbosity for each occurrence",
     )
 
     args = parser.parse_args()
