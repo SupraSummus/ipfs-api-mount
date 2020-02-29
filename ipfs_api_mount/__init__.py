@@ -312,7 +312,10 @@ class IPFSMount(fuse.Operations):
     def getattr(self, path, fh=None):
         try:
             if self._path_is_dir(self.root + path):
-                st_mode = stat.S_IFDIR
+                st_mode = (
+                    stat.S_IFDIR |
+                    stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH
+                )
             elif self._path_is_file(self.root + path):
                 st_mode = stat.S_IFREG
             else:
