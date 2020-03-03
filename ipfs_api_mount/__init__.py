@@ -283,7 +283,7 @@ class IPFSMount(fuse.Operations):
         except InvalidIPFSPathException as e:
             raise fuse.FuseOSError(errno.ENOENT) from e
 
-        # we dont use file handles so return anthing
+        # we dont use file handles so return anything
         return 0
 
     def read(self, path, size, offset, fh):
