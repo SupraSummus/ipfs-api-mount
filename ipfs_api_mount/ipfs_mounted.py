@@ -42,6 +42,8 @@ def ipfs_mounted(*args, multithreaded=False, **kwargs):
                 foreground=True,
                 nothreads=not multithreaded,
                 auto_unmount=True,
+                ro=False,
+                allow_other=False,
             )
 
         fuse_thread = ThreadWithException(target=_do_fuse_things)
