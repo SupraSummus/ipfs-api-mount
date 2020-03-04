@@ -25,9 +25,8 @@ class IPFSMount(fuse.Operations):
         self,
         root,  # root IPFS path
         ipfs_client,  # ipfshttpclient client instance
-        ls_cache_size=64,
-        object_data_cache_size=256,  # 2 * ~256MB assuming 1MB max block size
-        object_links_cache_size=256,
+        ls_cache_size=1024*10,
+        object_links_cache_size=1024*10,
         ready=None,  # an event to notify that everything is set-up
     ):
         self.root = root
@@ -36,7 +35,7 @@ class IPFSMount(fuse.Operations):
 
         api = ipfs_client
 
-        @lru_cache(maxsize=1024 * 10)
+        @lru_cache(maxsize=1024 * 1024)
         def resolve_path(object_path):
             try:
                 absolute_path = api.resolve(object_path)['Path']
@@ -54,7 +53,6 @@ class IPFSMount(fuse.Operations):
                 raise InvalidIPFSPathException()
             return absolute_path[6:]
 
-        @lru_cache(maxsize=object_data_cache_size)
         def object_data(object_id):
             try:
                 data = unixfs_pb2.Data()
@@ -80,7 +78,7 @@ class IPFSMount(fuse.Operations):
                 logger.warning('timeout while reading block %s', cid)
                 raise fuse.FuseOSError(errno.EAGAIN) from e
 
-        @lru_cache(maxsize=1024 * 10)
+        @lru_cache(maxsize=1024 * 1024)
         def block_size(cid):
             try:
                 return api.block.stat(cid)['Size']
@@ -139,6 +137,7 @@ class IPFSMount(fuse.Operations):
         if not self._path_is_dir(self.root):
             raise InvalidIPFSPathException("root path is not a directory")
 
+    
     def _object_type(self, object_id):
         data = self._object_data(object_id)
         if data is None:
@@ -154,7 +153,8 @@ class IPFSMount(fuse.Operations):
             return False
 
         return cid_bytes.startswith(bytes([0x01, 0x55]))
-
+    
+    @lru_cache(maxsize=1024 * 1024)
     def _path_is_dir(self, path):
         cid = self._resolve_path(path)
         return self._object_type(cid) in (
@@ -162,6 +162,7 @@ class IPFSMount(fuse.Operations):
             unixfs_pb2.Data.HAMTShard,
         )
 
+    @lru_cache(maxsize=1024 * 1024)
     def _path_is_file(self, path):
         cid = self._resolve_path(path)
         if cid.startswith('Q'):
@@ -172,6 +173,7 @@ class IPFSMount(fuse.Operations):
 
         return self._is_raw_block(cid)
 
+    @lru_cache(maxsize=1024 * 1024)
     def _path_size(self, path):
         cid = self._resolve_path(path)
 
