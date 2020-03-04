@@ -25,8 +25,8 @@ class IPFSMount(fuse.Operations):
         self,
         root,  # root IPFS path
         ipfs_client,  # ipfshttpclient client instance
-        ls_cache_size=1024*10,
-        object_links_cache_size=1024*10,
+        ls_cache_size=1024 * 10,
+        object_links_cache_size=1024 * 10,
         ready=None,  # an event to notify that everything is set-up
     ):
         self.root = root
@@ -136,7 +136,6 @@ class IPFSMount(fuse.Operations):
         if not self._path_is_dir(self.root):
             raise InvalidIPFSPathException("root path is not a directory")
 
-    
     def _object_type(self, object_id):
         data = self._object_data(object_id)
         if data is None:
@@ -152,7 +151,7 @@ class IPFSMount(fuse.Operations):
             return False
 
         return cid_bytes.startswith(bytes([0x01, 0x55]))
-    
+
     @lru_cache(maxsize=1024 * 1024)
     def _path_is_dir(self, path):
         cid = self._resolve_path(path)
