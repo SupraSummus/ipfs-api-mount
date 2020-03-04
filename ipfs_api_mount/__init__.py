@@ -66,7 +66,6 @@ class IPFSMount(fuse.Operations):
                 logger.warning('timeout while reading object data %s', object_id)
                 raise fuse.FuseOSError(errno.EAGAIN)
 
-        @lru_cache(maxsize=object_data_cache_size)
         def block_data(cid):
             try:
                 return api.block.get(cid)
