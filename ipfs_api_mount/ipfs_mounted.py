@@ -42,7 +42,7 @@ def ipfs_mounted(*args, multithreaded=False, **kwargs):
                 foreground=True,
                 nothreads=not multithreaded,
                 auto_unmount=True,
-                ro=False,
+                ro=True,
                 allow_other=False,
             )
 

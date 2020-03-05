@@ -19,7 +19,6 @@ if __name__ == '__main__':
     parser.add_argument('-b', '--background', action='store_true', help='Run in background.')
     parser.add_argument('-m', '--multithreaded', action='store_true', help='Use multiple threads to handle FS requests.')
     parser.add_argument('--allow-other', action='store_true', help='Set fuse mount option \'allow_other\'')
-    parser.add_argument('--read-only', action='store_true', help='Set \'ro\' mount option instead of \'rw\'')
     parser.add_argument('--api-host', type=str, default='127.0.0.1', help='IPFS API host')
     parser.add_argument('--api-port', type=int, default=5001, help='IPFS API port')
     parser.add_argument('root', type=str, help='Hash of IPFS dir to be mounted.')
@@ -65,6 +64,6 @@ if __name__ == '__main__':
             foreground=not args.background,
             nothreads=not args.multithreaded,
             auto_unmount=True,
-            ro=args.read_only,
+            ro=True,
             allow_other=args.allow_other,
         )
