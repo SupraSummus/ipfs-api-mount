@@ -6,7 +6,7 @@ import time
 
 import fuse
 
-from . import IPFSMount
+from . import IPFSMount, fuse_kwargs
 
 
 class ThreadWithException(Thread):
@@ -41,9 +41,8 @@ def ipfs_mounted(*args, multithreaded=False, **kwargs):
                 mountpoint,
                 foreground=True,
                 nothreads=not multithreaded,
-                auto_unmount=True,
-                ro=True,
                 allow_other=False,
+                **fuse_kwargs,
             )
 
         fuse_thread = ThreadWithException(target=_do_fuse_things)

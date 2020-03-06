@@ -8,7 +8,7 @@ import sys
 import fuse
 import ipfshttpclient
 
-from ipfs_api_mount import IPFSMount
+from ipfs_api_mount import IPFSMount, fuse_kwargs
 
 
 if __name__ == '__main__':
@@ -63,7 +63,6 @@ if __name__ == '__main__':
             args.mountpoint,
             foreground=not args.background,
             nothreads=not args.multithreaded,
-            auto_unmount=True,
-            ro=True,
             allow_other=args.allow_other,
+            **fuse_kwargs,
         )

@@ -338,3 +338,10 @@ class IPFSMount(fuse.Operations):
 
     getxattr = None
     listxattr = None
+
+
+fuse_kwargs = dict(
+    auto_unmount=True,
+    ro=True,
+    kernel_cache=True,
+)
