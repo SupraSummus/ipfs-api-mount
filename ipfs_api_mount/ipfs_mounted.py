@@ -25,7 +25,12 @@ class ThreadWithException(Thread):
 
 
 @contextmanager
-def ipfs_mounted(*args, multithreaded=False, **kwargs):
+def ipfs_mounted(
+    *args,
+    multithreaded=False,
+    max_read=0,  # 0 means default (no read size limit)
+    **kwargs,
+):
     with tempfile.TemporaryDirectory() as mountpoint:
         # start fuse thread
         ready = Event()
@@ -42,6 +47,7 @@ def ipfs_mounted(*args, multithreaded=False, **kwargs):
                 foreground=True,
                 nothreads=not multithreaded,
                 allow_other=False,
+                max_read=max_read,
                 **fuse_kwargs,
             )
 
