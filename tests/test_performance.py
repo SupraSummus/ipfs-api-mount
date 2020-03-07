@@ -20,9 +20,11 @@ class FilePerformanceTestCase(TestCase):
                 root, measuring_client,
                 object_data_cache_size=4,
                 max_read=chunk_size,  # prevent FUSE from doing large reads to exagerate cache effects
+                multithreaded=False,  # do everything in order to be more deterministic
             ) as mountpoint:
 
                 with open(os.path.join(mountpoint, 'file'), 'rb') as f:
                     f.read()
 
-            self.assertTrue(chunk_count <= measuring_client.request_count < 1.2 * chunk_count)
+            self.assertGreaterEqual(measuring_client.request_count, chunk_count)
+            self.assertLess(measuring_client.request_count, 1.2 * chunk_count)

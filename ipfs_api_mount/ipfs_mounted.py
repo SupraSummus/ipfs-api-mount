@@ -27,7 +27,7 @@ class ThreadWithException(Thread):
 @contextmanager
 def ipfs_mounted(
     *args,
-    multithreaded=False,
+    multithreaded=True,
     max_read=0,  # 0 means default (no read size limit)
     **kwargs,
 ):
