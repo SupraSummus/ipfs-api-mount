@@ -36,6 +36,7 @@ setup(
     install_requires=[
         'fusepy==3.0.*',
         'ipfshttpclient==0.4.*',
+        'lru-dict==1.*',
         'protobuf==3.6.*',
         'py-multibase==1.*',
     ],

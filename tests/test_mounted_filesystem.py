@@ -128,6 +128,7 @@ class ErrorsTestCase(TestCase):
             )
 
     def test_nonexistent_file(self):
+        """ there is no way we can open nonexistent file """
         root = ipfs_dir({})
         with ipfs_mounted(root, ipfs_client) as mountpoint:
             with self.assertRaises(FileNotFoundError):

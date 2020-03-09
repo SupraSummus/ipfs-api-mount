@@ -29,6 +29,7 @@ def ipfs_mounted(
     *args,
     multithreaded=True,
     max_read=0,  # 0 means default (no read size limit)
+    attr_timeout=1.0,  # 1s - default value according to manpage
     **kwargs,
 ):
     with tempfile.TemporaryDirectory() as mountpoint:
@@ -48,13 +49,17 @@ def ipfs_mounted(
                 nothreads=not multithreaded,
                 allow_other=False,
                 max_read=max_read,
+                attr_timeout=attr_timeout,
                 **fuse_kwargs,
             )
 
         fuse_thread = ThreadWithException(target=_do_fuse_things)
         fuse_thread.start()
-        ready.wait()
-        time.sleep(1)  # meh, dirty
+        if not ready.wait(timeout=5):
+            if fuse_thread.exc is not None:
+                raise fuse_thread.exc
+            assert False  # panic, basically
+        time.sleep(1)  # this is dirty, but after setting `ready` fuse thread does few other things - we give it some time here
 
         # do wrapped things
         yield mountpoint
