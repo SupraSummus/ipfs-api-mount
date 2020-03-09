@@ -40,6 +40,12 @@ class DirectoryPerformanceTestCase(TestCase):
             for i in range(n)
         })
 
+        ls_kwargs = dict(
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            check=True,
+        )
+
         # cache gets overflowed
         with MeasuringClient() as measuring_client:
             with ipfs_mounted(
@@ -47,9 +53,9 @@ class DirectoryPerformanceTestCase(TestCase):
                 attr_cache_size=int(n * 0.9),
                 attr_timeout=0,  # disable FUSE-level caching
             ) as mountpoint:
-                subprocess.run(['ls', '-l', mountpoint], capture_output=True)
+                subprocess.run(['ls', '-l', mountpoint], **ls_kwargs)
                 measuring_client.clear_request_count()
-                subprocess.run(['ls', '-l', mountpoint], capture_output=True)
+                subprocess.run(['ls', '-l', mountpoint], **ls_kwargs)
                 self.assertGreaterEqual(measuring_client.request_count, n)
 
         # now cache size is sufficient
@@ -59,7 +65,7 @@ class DirectoryPerformanceTestCase(TestCase):
                 attr_cache_size=int(n * 1.1),
                 attr_timeout=0,  # disable FUSE-level caching
             ) as mountpoint:
-                subprocess.run(['ls', '-l', mountpoint], capture_output=True)
+                subprocess.run(['ls', '-l', mountpoint], **ls_kwargs)
                 measuring_client.clear_request_count()
-                subprocess.run(['ls', '-l', mountpoint], capture_output=True)
+                subprocess.run(['ls', '-l', mountpoint], **ls_kwargs)
                 self.assertLess(measuring_client.request_count, n * 0.1)
