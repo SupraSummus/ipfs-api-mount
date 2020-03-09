@@ -4,6 +4,7 @@ import os
 import stat
 
 import fuse
+import ipfshttpclient
 
 from .ipfs import CachedIPFS, InvalidIPFSPathException
 
@@ -51,48 +52,74 @@ class IPFSMount(fuse.Operations):
             if not self.ipfs.path_is_dir(full_path) and not self.ipfs.path_is_file(full_path):
                 logger.warning('strange entity type at %s', full_path)
                 fuse.FuseOSError(errno.ENOENT)
+
         except InvalidIPFSPathException as e:
             raise fuse.FuseOSError(errno.ENOENT) from e
+
+        except ipfshttpclient.exceptions.TimeoutError as e:
+            logger.warning('timeout while open(%s)', full_path)
+            raise fuse.FuseOSError(errno.EAGAIN) from e
 
         # we dont use file handles so return anything
         return 0
 
     def read(self, path, size, offset, fh):
+        full_path = self.root + path
+
         try:
-            if self.ipfs.path_is_dir(self.root + path):
+            if self.ipfs.path_is_dir(full_path):
                 raise fuse.FuseOSError(errno.EISDIR)
-            elif not self.ipfs.path_is_file(self.root + path):
+            elif not self.ipfs.path_is_file(full_path):
                 raise fuse.FuseOSError(errno.ENOENT)
+
+            data = bytearray(size)
+            n = self.ipfs.read_into(
+                self.ipfs.resolve(full_path),
+                offset, memoryview(data),
+            )
+            return bytes(data[:(n - offset)])
+
         except InvalidIPFSPathException as e:
             raise fuse.FuseOSError(errno.ENOENT) from e
 
-        data = bytearray(size)
-        n = self.ipfs.read_into(
-            self.ipfs.resolve(self.root + path),
-            offset, memoryview(data),
-        )
-        return bytes(data[:(n - offset)])
+        except ipfshttpclient.exceptions.TimeoutError as e:
+            logger.warning('timeout while read(%s)', full_path)
+            raise fuse.FuseOSError(errno.EAGAIN) from e
 
     def readdir(self, path, fh):
-        ls_result = self.ipfs.ls(self.root + path)
+        full_path = self.root + path
+        try:
+            ls_result = self.ipfs.ls(full_path)
+        except ipfshttpclient.exceptions.TimeoutError as e:
+            logger.warning('timeout while readdir(%s)', full_path)
+            raise fuse.FuseOSError(errno.EAGAIN) from e
+
         if ls_result is None:
             raise fuse.FuseOSError(errno.ENOTDIR)
 
         return ['.', '..'] + list(ls_result.keys())
 
     def getattr(self, path, fh=None):
+        full_path = self.root + path
         try:
-            if self.ipfs.path_is_dir(self.root + path):
+            if self.ipfs.path_is_dir(full_path):
                 st_mode = (
                     stat.S_IFDIR |
                     stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH
                 )
-            elif self.ipfs.path_is_file(self.root + path):
+            elif self.ipfs.path_is_file(full_path):
                 st_mode = stat.S_IFREG
             else:
                 raise fuse.FuseOSError(errno.ENOENT)
+
+            st_size = self.ipfs.path_size(full_path)
+
         except InvalidIPFSPathException as e:
             raise fuse.FuseOSError(errno.ENOENT) from e
+
+        except ipfshttpclient.exceptions.TimeoutError as e:
+            logger.warning('timeout while getattr(%s)', full_path)
+            raise fuse.FuseOSError(errno.EAGAIN) from e
 
         st_mode |= stat.S_IRUSR | stat.S_IRGRP | stat.S_IROTH
 
@@ -104,7 +131,7 @@ class IPFSMount(fuse.Operations):
             'st_uid': 0,
             'st_mode': st_mode,
             'st_nlink': 0,
-            'st_size': self.ipfs.path_size(self.root + path),
+            'st_size': st_size,
         }
 
     getxattr = None
