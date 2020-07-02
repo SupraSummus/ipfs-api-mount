@@ -8,7 +8,7 @@ import sys
 import fuse
 import ipfshttpclient
 
-from ipfs_api_mount import IPFSMount, fuse_kwargs
+from ipfs_api_mount import IPFSMount, fuse_kwargs, __version__
 
 
 if __name__ == '__main__':
@@ -35,6 +35,7 @@ if __name__ == '__main__':
         dest='verbose_count', action='count', default=0,
         help="increases log verbosity for each occurrence",
     )
+    parser.add_argument('--version', action='version', version='%(prog)s ' + __version__)
 
     args = parser.parse_args()
 
@@ -45,7 +46,7 @@ if __name__ == '__main__':
         stream=args.log,
     )
 
-    logging.info('starting ipfs-api-mount with commandline %s', str(sys.argv))
+    logging.info('starting ipfs-api-mount %s with commandline %s', __version__, str(sys.argv))
 
     ip = socket.gethostbyname(args.api_host)
 

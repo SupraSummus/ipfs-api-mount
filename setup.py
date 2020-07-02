@@ -23,9 +23,12 @@ class custom_develop(develop):
         develop.run(self)
 
 
+exec(open('ipfs_api_mount/version.py').read())
+
+
 setup(
     name='ipfs_api_mount',
-    version='0.3.1',
+    version=__version__,  # noqa: F821
     description='Mount IPFS directory as local FS.',
     license='MIT',
     url='https://github.com/SupraSummus/ipfs-api-mount',

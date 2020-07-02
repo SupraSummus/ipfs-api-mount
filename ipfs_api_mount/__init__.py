@@ -7,6 +7,10 @@ import fuse
 import ipfshttpclient
 
 from .ipfs import CachedIPFS, InvalidIPFSPathException
+from .version import __version__
+
+
+__all__ = ['__version__', 'IPFSMount', 'fuse_kwargs']
 
 
 logger = logging.getLogger(__name__)

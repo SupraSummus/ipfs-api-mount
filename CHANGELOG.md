@@ -6,6 +6,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 Well, at least this is the intention.
 
 ## [Unreleased]
+### Added
+ * Version info embedded in package and available via `--version`
+
 ### Fixed
  * More liberal requirements for protobuf version - any v3.x.x is now good
 
