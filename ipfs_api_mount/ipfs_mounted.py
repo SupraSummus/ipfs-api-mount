@@ -61,14 +61,16 @@ def ipfs_mounted(
             assert False  # panic, basically
         time.sleep(1)  # this is dirty, but after setting `ready` fuse thread does few other things - we give it some time here
 
-        # do wrapped things
-        yield mountpoint
+        try:
+            # do wrapped things
+            yield mountpoint
 
-        # stop fuse thread
-        # TODO - fuse_exit() has global effects, so locking/more precise termination is needed
-        # anyway, fuse.fuse_exit() <- causes segafult, so not using it
-        subprocess.run(
-            ['fusermount', '-u', mountpoint],
-            check=fuse_thread.exc is None,  # this command has to succeed only if fuse thread is feeling good
-        )
-        fuse_thread.join()
+        finally:
+            # stop fuse thread
+            # TODO - fuse_exit() has global effects, so locking/more precise termination is needed
+            # anyway, fuse.fuse_exit() <- causes segafult, so not using it
+            subprocess.run(
+                ['fusermount', '-u', mountpoint],
+                check=fuse_thread.exc is None,  # this command has to succeed only if fuse thread is feeling good
+            )
+            fuse_thread.join()
