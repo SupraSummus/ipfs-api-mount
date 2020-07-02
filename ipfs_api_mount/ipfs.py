@@ -81,8 +81,8 @@ class CachedIPFS:
                 return self.subblock_cids_cache[cid]
 
             subblock_cids = [
-                l['Hash']
-                for l in self.client.object.links(cid).get('Links', [])
+                link['Hash']
+                for link in self.client.object.links(cid).get('Links', [])
             ]
             self.subblock_cids_cache[cid] = subblock_cids
             return subblock_cids

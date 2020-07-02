@@ -4,7 +4,7 @@ import subprocess
 
 from ipfs_api_mount.ipfs_mounted import ipfs_mounted
 
-from .tools import ipfs_dir, ipfs_file, MeasuringClient
+from .tools import ipfs_dir, ipfs_file, ipfs_client, request_count_measurement
 
 
 class FilePerformanceTestCase(TestCase):
@@ -15,20 +15,19 @@ class FilePerformanceTestCase(TestCase):
         content = os.urandom(chunk_count * chunk_size)
         root = ipfs_dir({'file': ipfs_file(content, chunker=f'size-{chunk_size}')})
 
-        with MeasuringClient() as measuring_client:
-
-            with ipfs_mounted(
-                root, measuring_client,
-                link_cache_size=4,
-                max_read=chunk_size,  # prevent FUSE from doing large reads to exagerate cache effects
-                multithreaded=False,  # do everything in order to be more deterministic
-            ) as mountpoint:
+        with ipfs_mounted(
+            root, ipfs_client,
+            link_cache_size=4,
+            max_read=chunk_size,  # prevent FUSE from doing large reads to exagerate cache effects
+            multithreaded=False,  # do everything in order to be more deterministic
+        ) as mountpoint:
+            with request_count_measurement(ipfs_client) as mocked_request:
 
                 with open(os.path.join(mountpoint, 'file'), 'rb') as f:
                     f.read()
 
-            self.assertGreaterEqual(measuring_client.request_count, chunk_count)
-            self.assertLess(measuring_client.request_count, 1.2 * chunk_count)
+                self.assertGreaterEqual(mocked_request.call_count, chunk_count)
+                self.assertLess(mocked_request.call_count, 1.2 * chunk_count)
 
 
 class DirectoryPerformanceTestCase(TestCase):
@@ -47,25 +46,23 @@ class DirectoryPerformanceTestCase(TestCase):
         )
 
         # cache gets overflowed
-        with MeasuringClient() as measuring_client:
-            with ipfs_mounted(
-                root, measuring_client,
-                attr_cache_size=int(n * 0.9),
-                attr_timeout=0,  # disable FUSE-level caching
-            ) as mountpoint:
+        with ipfs_mounted(
+            root, ipfs_client,
+            attr_cache_size=int(n * 0.9),
+            attr_timeout=0,  # disable FUSE-level caching
+        ) as mountpoint:
+            subprocess.run(['ls', '-l', mountpoint], **ls_kwargs)
+            with request_count_measurement(ipfs_client) as mocked:
                 subprocess.run(['ls', '-l', mountpoint], **ls_kwargs)
-                measuring_client.clear_request_count()
-                subprocess.run(['ls', '-l', mountpoint], **ls_kwargs)
-                self.assertGreaterEqual(measuring_client.request_count, n)
+                self.assertGreaterEqual(mocked.call_count, n)
 
         # now cache size is sufficient
-        with MeasuringClient() as measuring_client:
-            with ipfs_mounted(
-                root, measuring_client,
-                attr_cache_size=int(n * 1.1),
-                attr_timeout=0,  # disable FUSE-level caching
-            ) as mountpoint:
+        with ipfs_mounted(
+            root, ipfs_client,
+            attr_cache_size=int(n * 1.1),
+            attr_timeout=0,  # disable FUSE-level caching
+        ) as mountpoint:
+            subprocess.run(['ls', '-l', mountpoint], **ls_kwargs)
+            with request_count_measurement(ipfs_client) as mocked:
                 subprocess.run(['ls', '-l', mountpoint], **ls_kwargs)
-                measuring_client.clear_request_count()
-                subprocess.run(['ls', '-l', mountpoint], **ls_kwargs)
-                self.assertLess(measuring_client.request_count, n * 0.1)
+                self.assertLess(mocked.call_count, n * 0.1)
