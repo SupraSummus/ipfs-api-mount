@@ -25,7 +25,7 @@ class custom_develop(develop):
 
 setup(
     name='ipfs_api_mount',
-    version='0.3.0',
+    version='0.3.1',
     description='Mount IPFS directory as local FS.',
     license='MIT',
     url='https://github.com/SupraSummus/ipfs-api-mount',
