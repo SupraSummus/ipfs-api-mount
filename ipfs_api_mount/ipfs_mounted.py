@@ -67,6 +67,14 @@ class IPFSFUSEThread(Thread):
             check=self.is_alive(),  # this command has to succeed only if fuse thread is feeling good
         )
 
+    def __enter__(self):
+        self.start()
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.unmount()
+        self.join()
+
 
 @contextmanager
 def ipfs_mounted(
@@ -75,11 +83,8 @@ def ipfs_mounted(
     **kwargs,
 ):
     with tempfile.TemporaryDirectory() as mountpoint:
-        # start fuse thread
-        fuse_thread = IPFSFUSEThread(mountpoint, *args, **kwargs)
-        fuse_thread.start()
+        with IPFSFUSEThread(mountpoint, *args, **kwargs) as fuse_thread:
 
-        try:
             # dirty dirty active waiting for now
             # no idea how to do it the clean way
             waiting_start = time.monotonic()
@@ -90,11 +95,6 @@ def ipfs_mounted(
 
             # do wrapped things
             yield mountpoint
-
-        finally:
-            # stop fuse thread
-            fuse_thread.unmount()
-            fuse_thread.join()
 
 
 def is_mountpoint_ready(mountpoint):
