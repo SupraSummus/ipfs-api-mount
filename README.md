@@ -77,6 +77,18 @@ If this occurs performance will be much worst than without cache. When
 using the command you can adjust cache size to get best performance (but
 for cache thrashing there is little hope).
 
+Caching options
+---------------
+
+There are four cache parameters:
+* `--ls-cache-size` - how many directory content lists are cached. Increase this if you want subsequent `ls` to be faster.
+* `--block-cache-size` - how many data blocks are cached. This cache needs to be bigger if you are doing sequential reads in many scattered places at once (in single or multiple files). It doesn't affect speed of reading the same spot for the second time, because this is handled by FUSE (`kernel_cache` option). This cache is memory-intensive - takes up to 1MB per entry.
+* `--link-cache-size` - Files on IPFS are trees of blocks. This cache keeps the tree structure. Increase this cache's size if you are reading many big files simultanously (depth of a single tree is generally <4, but many of them can overflow the cache). It doesn't affect speed of reading previously read data - this is handled by FUSE (`kernel_cache` option).
+* `--attr-cache-size` - cache related to file and directory attributes. This needs to be bigger if you are reading many files attributes, and you want subsequent reads to be faster. For example, if you do `ls -l` (`-l` will call `stat()` on every file) on a large directory and you want second `ls -l` to be faster, you need to set this cache to be bigger than number of files in the directory.
+
+Hope that makes sense ;-)
+
+
 See also
 --------
 

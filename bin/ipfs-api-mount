@@ -1,27 +1,52 @@
 #!/usr/bin/env python
 
 import argparse
+import logging
 import socket
+import sys
 
 import fuse
 import ipfshttpclient
 
-from ipfs_api_mount import IPFSMount
+from ipfs_api_mount import IPFSMount, fuse_kwargs, __version__
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Mount specified IPFS directory as local FS.')
     parser.add_argument('--ls-cache-size', type=int, default=64, help='Max number of ls results kept in cache.')
-    parser.add_argument('--object-data-cache-size', type=int, default=256, help='Max number of object data secrions kept in cache.')
-    parser.add_argument('--object-links-cache-size', type=int, default=256, help='Max number of object link sections kept in cache.')
+    parser.add_argument('--block-cache-size', type=int, default=16, help='Max number of data blocks kept in cache.')
+    parser.add_argument('--link-cache-size', type=int, default=256, help='Max number of object link sections kept in cache.')
+    parser.add_argument('--attr-cache-size', type=int, default=1024 * 128, help='Max number of file attributes kept in cache.')
     parser.add_argument('-b', '--background', action='store_true', help='Run in background.')
-    parser.add_argument('-m', '--multithreaded', action='store_true', help='Use multiple threads to handle FS requests.')
+    parser.add_argument('--no-threads', action='store_true', help='Use single thread to handle FS requests.')
+    parser.add_argument('--allow-other', action='store_true', help='Set fuse mount option \'allow_other\'')
     parser.add_argument('--api-host', type=str, default='127.0.0.1', help='IPFS API host')
     parser.add_argument('--api-port', type=int, default=5001, help='IPFS API port')
     parser.add_argument('root', type=str, help='Hash of IPFS dir to be mounted.')
     parser.add_argument('mountpoint', type=str, help='Local mountpoint path.')
 
+    parser.add_argument(
+        "-l", "--log",
+        dest='log', default=sys.stderr, type=argparse.FileType('w'),
+        help="where to put logs, use something like /proc/self/fd/5 for logging to custom fd",
+    )
+    parser.add_argument(
+        "-v", "--verbose",
+        dest='verbose_count', action='count', default=0,
+        help="increases log verbosity for each occurrence",
+    )
+    parser.add_argument('--version', action='version', version='%(prog)s ' + __version__)
+
     args = parser.parse_args()
+
+    # Sets log level to WARN going more verbose for each new -v.
+    logging.basicConfig(
+        format='%(process)d %(levelname)s: %(message)s',
+        level=max(3 - args.verbose_count, 0) * 10,
+        stream=args.log,
+    )
+
+    logging.info('starting ipfs-api-mount %s with commandline %s', __version__, str(sys.argv))
 
     ip = socket.gethostbyname(args.api_host)
 
@@ -34,10 +59,13 @@ if __name__ == '__main__':
                 args.root,
                 client,
                 ls_cache_size=args.ls_cache_size,
-                object_data_cache_size=args.object_data_cache_size,
-                object_links_cache_size=args.object_links_cache_size,
+                block_cache_size=args.block_cache_size,
+                link_cache_size=args.link_cache_size,
+                attr_cache_size=args.attr_cache_size,
             ),
             args.mountpoint,
             foreground=not args.background,
-            nothreads=not args.multithreaded,
+            nothreads=args.no_threads,
+            allow_other=args.allow_other,
+            **fuse_kwargs,
         )

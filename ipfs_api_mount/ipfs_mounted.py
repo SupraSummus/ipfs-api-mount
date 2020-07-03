@@ -6,7 +6,7 @@ import time
 
 from refuse import high as fuse
 
-from . import IPFSMount
+from . import IPFSMount, fuse_kwargs
 
 
 class ThreadWithException(Thread):
@@ -25,7 +25,13 @@ class ThreadWithException(Thread):
 
 
 @contextmanager
-def ipfs_mounted(*args, multithreaded=False, **kwargs):
+def ipfs_mounted(
+    *args,
+    multithreaded=True,
+    max_read=0,  # 0 means default (no read size limit)
+    attr_timeout=1.0,  # 1s - default value according to manpage
+    **kwargs,
+):
     with tempfile.TemporaryDirectory() as mountpoint:
         # start fuse thread
         ready = Event()
@@ -41,21 +47,30 @@ def ipfs_mounted(*args, multithreaded=False, **kwargs):
                 mountpoint,
                 foreground=True,
                 nothreads=not multithreaded,
+                allow_other=False,
+                max_read=max_read,
+                attr_timeout=attr_timeout,
+                **fuse_kwargs,
             )
 
         fuse_thread = ThreadWithException(target=_do_fuse_things)
         fuse_thread.start()
-        ready.wait()
-        time.sleep(1)  # meh, dirty
+        if not ready.wait(timeout=5):
+            if fuse_thread.exc is not None:
+                raise fuse_thread.exc
+            assert False  # panic, basically
+        time.sleep(1)  # this is dirty, but after setting `ready` fuse thread does few other things - we give it some time here
 
-        # do wrapped things
-        yield mountpoint
+        try:
+            # do wrapped things
+            yield mountpoint
 
-        # stop fuse thread
-        # TODO - fuse_exit() has global effects, so locking/more precise termination is needed
-        # anyway, fuse.fuse_exit() <- causes segafult, so not using it
-        subprocess.run(
-            ['fusermount', '-u', mountpoint],
-            check=fuse_thread.exc is None,  # this command has to succeed only if fuse thread is feeling good
-        )
-        fuse_thread.join()
+        finally:
+            # stop fuse thread
+            # TODO - fuse_exit() has global effects, so locking/more precise termination is needed
+            # anyway, fuse.fuse_exit() <- causes segafult, so not using it
+            subprocess.run(
+                ['fusermount', '-u', mountpoint],
+                check=fuse_thread.exc is None,  # this command has to succeed only if fuse thread is feeling good
+            )
+            fuse_thread.join()

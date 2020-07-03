@@ -38,6 +38,26 @@ class DirectoryTestCase(TestCase):
             self.assertEqual(s.st_mtime, 0)
             self.assertEqual(s.st_atime, 0)
 
+    def test_permission(self):
+        root = ipfs_dir({})
+        with ipfs_mounted(root, ipfs_client) as mountpoint:
+            s = os.stat(mountpoint)
+            self.assertEqual(
+                s.st_mode,
+                0o40555,
+            )
+
+    def test_permission_nested(self):
+        root = ipfs_dir({
+            'dir': ipfs_dir({}),
+        })
+        with ipfs_mounted(root, ipfs_client) as mountpoint:
+            s = os.stat(os.path.join(mountpoint, 'dir'))
+            self.assertEqual(
+                s.st_mode,
+                0o40555,
+            )
+
 
 class FileTestCase(TestCase):
     def test_small_file_read(self):
@@ -53,6 +73,26 @@ class FileTestCase(TestCase):
     def test_10MiB_file_read(self):
         content = os.urandom(10 * 1024 * 1024)
         root = ipfs_dir({'file': ipfs_file(content)})
+        with ipfs_mounted(root, ipfs_client) as mountpoint:
+            with open(os.path.join(mountpoint, 'file'), 'rb') as f:
+                self.assertEqual(
+                    f.read(),
+                    content,
+                )
+
+    def test_raw_leaves_small_file_read(self):
+        content = b'precious'
+        root = ipfs_dir({'file': ipfs_file(content, raw_leaves=True)})
+        with ipfs_mounted(root, ipfs_client) as mountpoint:
+            with open(os.path.join(mountpoint, 'file'), 'rb') as f:
+                self.assertEqual(
+                    f.read(),
+                    content,
+                )
+
+    def test_raw_leaves_10MiB_file(self):
+        content = os.urandom(10 * 1024 * 1024)
+        root = ipfs_dir({'file': ipfs_file(content, raw_leaves=True)})
         with ipfs_mounted(root, ipfs_client) as mountpoint:
             with open(os.path.join(mountpoint, 'file'), 'rb') as f:
                 self.assertEqual(
@@ -88,6 +128,7 @@ class ErrorsTestCase(TestCase):
             )
 
     def test_nonexistent_file(self):
+        """ there is no way we can open nonexistent file """
         root = ipfs_dir({})
         with ipfs_mounted(root, ipfs_client) as mountpoint:
             with self.assertRaises(FileNotFoundError):
