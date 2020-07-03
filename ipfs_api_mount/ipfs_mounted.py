@@ -13,12 +13,28 @@ class IPFSMountTimeout(Exception):
     pass
 
 
-class ThreadWithException(Thread):
+class IPFSFUSEThread(Thread):
+    def __init__(
+        self,
+        mountpoint,
+        *args,
+        multithreaded=True,
+        max_read=0,  # 0 means default (no read size limit)
+        attr_timeout=1.0,  # 1s - default value according to manpage
+        **kwargs,
+    ):
+        super().__init__()
+        self.mountpoint = mountpoint
+        self.multithreaded = multithreaded
+        self.max_read = max_read
+        self.attr_timeout = attr_timeout
+        self.args = args
+        self.kwargs = kwargs
 
     def run(self):
         self.exc = None
         try:
-            super().run()
+            self.mount()
         except Exception as e:
             self.exc = e
 
@@ -27,36 +43,40 @@ class ThreadWithException(Thread):
         if self.exc:
             raise self.exc
 
+    def mount(self):
+        ipfs_mount = IPFSMount(
+            *self.args,
+            **self.kwargs,
+        )
+        fuse.FUSE(
+            ipfs_mount,
+            self.mountpoint,
+            foreground=True,
+            nothreads=not self.multithreaded,
+            allow_other=False,
+            max_read=self.max_read,
+            attr_timeout=self.attr_timeout,
+            **fuse_kwargs,
+        )
+
+    def unmount(self):
+        # TODO - fuse_exit() has global effects, so locking/more precise termination is needed
+        # anyway, fuse.fuse_exit() <- causes segafult, so not using it
+        subprocess.run(
+            ['fusermount', '-u', self.mountpoint, '-q'],
+            check=self.is_alive(),  # this command has to succeed only if fuse thread is feeling good
+        )
+
 
 @contextmanager
 def ipfs_mounted(
     *args,
     mount_timeout=5.0,  # seconds
-    multithreaded=True,
-    max_read=0,  # 0 means default (no read size limit)
-    attr_timeout=1.0,  # 1s - default value according to manpage
     **kwargs,
 ):
     with tempfile.TemporaryDirectory() as mountpoint:
         # start fuse thread
-
-        def _do_fuse_things():
-            fuse.FUSE(
-                # Funny thing - IPFSMount has to be constructed here. Assigning is to local var break things.
-                IPFSMount(
-                    *args,
-                    **kwargs,
-                ),
-                mountpoint,
-                foreground=True,
-                nothreads=not multithreaded,
-                allow_other=False,
-                max_read=max_read,
-                attr_timeout=attr_timeout,
-                **fuse_kwargs,
-            )
-
-        fuse_thread = ThreadWithException(target=_do_fuse_things)
+        fuse_thread = IPFSFUSEThread(mountpoint, *args, **kwargs)
         fuse_thread.start()
 
         try:
@@ -73,12 +93,7 @@ def ipfs_mounted(
 
         finally:
             # stop fuse thread
-            # TODO - fuse_exit() has global effects, so locking/more precise termination is needed
-            # anyway, fuse.fuse_exit() <- causes segafult, so not using it
-            subprocess.run(
-                ['fusermount', '-u', mountpoint, '-q'],
-                check=fuse_thread.is_alive(),  # this command has to succeed only if fuse thread is feeling good
-            )
+            fuse_thread.unmount()
             fuse_thread.join()
 
 
