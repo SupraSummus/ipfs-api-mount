@@ -1,5 +1,5 @@
 from contextlib import contextmanager
-from threading import Thread, Event
+from threading import Thread
 import subprocess
 import tempfile
 import time
@@ -7,6 +7,10 @@ import time
 import fuse
 
 from . import IPFSMount, fuse_kwargs
+
+
+class IPFSMountTimeout(Exception):
+    pass
 
 
 class ThreadWithException(Thread):
@@ -27,6 +31,7 @@ class ThreadWithException(Thread):
 @contextmanager
 def ipfs_mounted(
     *args,
+    mount_timeout=5.0,  # seconds
     multithreaded=True,
     max_read=0,  # 0 means default (no read size limit)
     attr_timeout=1.0,  # 1s - default value according to manpage
@@ -34,14 +39,12 @@ def ipfs_mounted(
 ):
     with tempfile.TemporaryDirectory() as mountpoint:
         # start fuse thread
-        ready = Event()
 
         def _do_fuse_things():
             fuse.FUSE(
                 # Funny thing - IPFSMount has to be constructed here. Assigning is to local var break things.
                 IPFSMount(
                     *args,
-                    ready=ready,
                     **kwargs,
                 ),
                 mountpoint,
@@ -55,13 +58,16 @@ def ipfs_mounted(
 
         fuse_thread = ThreadWithException(target=_do_fuse_things)
         fuse_thread.start()
-        if not ready.wait(timeout=5):
-            if fuse_thread.exc is not None:
-                raise fuse_thread.exc
-            assert False  # panic, basically
-        time.sleep(1)  # this is dirty, but after setting `ready` fuse thread does few other things - we give it some time here
 
         try:
+            # dirty dirty active waiting for now
+            # no idea how to do it the clean way
+            waiting_start = time.monotonic()
+            while fuse_thread.is_alive() and not is_mountpoint_ready(mountpoint):
+                if time.monotonic() - waiting_start > mount_timeout:
+                    raise IPFSMountTimeout()
+                time.sleep(0.01)
+
             # do wrapped things
             yield mountpoint
 
@@ -70,7 +76,17 @@ def ipfs_mounted(
             # TODO - fuse_exit() has global effects, so locking/more precise termination is needed
             # anyway, fuse.fuse_exit() <- causes segafult, so not using it
             subprocess.run(
-                ['fusermount', '-u', mountpoint],
-                check=fuse_thread.exc is None,  # this command has to succeed only if fuse thread is feeling good
+                ['fusermount', '-u', mountpoint, '-q'],
+                check=fuse_thread.is_alive(),  # this command has to succeed only if fuse thread is feeling good
             )
             fuse_thread.join()
+
+
+def is_mountpoint_ready(mountpoint):
+    # AFAIK works only under linux. More platform-agnostic version may come later.
+    with open('/proc/mounts', 'rt') as mounts:
+        for mount in mounts:
+            typ, this_mountpoint, *_ = mount.split(' ')
+            if this_mountpoint == mountpoint:
+                return True
+    return False
