@@ -23,14 +23,10 @@ class IPFSMount(fuse.Operations):
         self,
         root,  # root IPFS path
         ipfs_client,  # ipfshttpclient client instance
-        ready=None,  # an event to notify that everything is set-up
         **kwargs,
     ):
         self.root = root
         self.ipfs = CachedIPFS(ipfs_client, **kwargs)
-
-        if ready is not None:
-            ready.set()
 
         # this shouldn't be called before `ready` is set because it may throw an exception and hang forever
         self._validate_root_path()
