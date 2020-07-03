@@ -9,6 +9,12 @@ Well, at least this is the intention.
 ### Added
  * Version info embedded in package and available via `--version`
 
+### Changed
+ * Reworked `ipfs_mounted` context manager internals
+
+### Removed
+ * `IPFSMount` no longer accepts `ready` argument
+
 ### Fixed
  * More liberal requirements for protobuf version - any v3.x.x is now good
 
