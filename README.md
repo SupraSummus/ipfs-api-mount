@@ -33,6 +33,17 @@ To unmount
 
     fusermount -u a_dir
 
+### Python-level use
+
+Mountpoints can be created inside python programs
+
+    import os
+    import ipfshttpclient
+    from ipfs_api_mount.ipfs_mounted import ipfs_mounted
+
+    with ipfs_mounted('QmSomeHash', ipfshttpclient.connect()) as mountpoint:
+        print(os.listdir(mountpoint))
+
 Benchmark
 ---------
 
