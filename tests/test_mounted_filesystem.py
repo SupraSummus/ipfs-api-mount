@@ -1,5 +1,6 @@
 from unittest import TestCase
 import os
+import subprocess
 
 from ipfs_api_mount import InvalidIPFSPathException
 from ipfs_api_mount.ipfs_mounted import ipfs_mounted
@@ -58,6 +59,15 @@ class DirectoryTestCase(TestCase):
                 0o40555,
             )
 
+    def test_cid_version_1(self):
+        # constant cid because i'm lazy
+        root = "bafybeiczsscdsbs7ffqz55asqdf3smv6klcw3gofszvwlyarci47bgf354"
+        with ipfs_mounted(root, ipfs_client) as mountpoint:
+            self.assertEqual(
+                os.listdir(mountpoint),
+                [],
+            )
+
 
 class FileTestCase(TestCase):
     def test_small_file_read(self):
@@ -98,6 +108,21 @@ class FileTestCase(TestCase):
                 self.assertEqual(
                     f.read(),
                     content,
+                )
+
+    def test_cid_version_1_small_file(self):
+        content = "this is next gen file"
+        root = subprocess.run(
+            f'echo "{content}" | ipfs add --cid-version 1 --wrap-with-directory --quieter --stdin-name file',
+            shell=True,
+            check=True,
+            stdout=subprocess.PIPE,
+        ).stdout.decode('ascii').strip()
+        with ipfs_mounted(root, ipfs_client) as mountpoint:
+            with open(os.path.join(mountpoint, 'file'), 'rb') as f:
+                self.assertEqual(
+                    f.read().decode('ascii'),
+                    content + '\n',
                 )
 
 

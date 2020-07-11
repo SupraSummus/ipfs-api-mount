@@ -160,7 +160,7 @@ class CachedIPFS:
             raise InvalidIPFSPathException()
 
     def cid_type(self, cid):
-        if self._is_v0_object(cid):
+        if self._is_v0_object(cid) or self._is_v1_object(cid):
             if cid in self.cid_type_cache:
                 return self.cid_type_cache[cid]
 
@@ -259,3 +259,12 @@ class CachedIPFS:
             return False
 
         return cid_bytes.startswith(bytes([0x01, 0x55]))
+
+    def _is_v1_object(self, cid):
+        try:
+            cid_bytes = multibase.decode(cid)
+        except ValueError:
+            logger.exception("encountered malformed object/block id")
+            return False
+
+        return cid_bytes.startswith(bytes([0x01, 0x70]))
