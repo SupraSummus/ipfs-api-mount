@@ -17,6 +17,7 @@ Well, at least this is the intention.
 
 ### Fixed
  * More liberal requirements for protobuf version - any v3.x.x is now good
+ * v1 CID support
 
 ## [0.3.1] - 2020-07-02
 ### Added
