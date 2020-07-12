@@ -6,18 +6,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 Well, at least this is the intention.
 
 ## [Unreleased]
+
+## [0.3.2] - 2020-07-12
 ### Added
  * Version info embedded in package and available via `--version`
-
-### Changed
- * Reworked `ipfs_mounted` context manager internals
+ * Public python-level API for mounting - `ipfs_mounted` context manager
 
 ### Removed
  * `IPFSMount` no longer accepts `ready` argument
 
 ### Fixed
- * More liberal requirements for protobuf version - any v3.x.x is now good
- * v1 CID support
+ * Fixed protobuf package version mismatch
+ * CID v1 support
 
 ## [0.3.1] - 2020-07-02
 ### Added
