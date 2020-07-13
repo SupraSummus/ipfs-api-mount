@@ -29,7 +29,7 @@ script:
   - flake8
   - ipfs daemon --offline --init &
   - IPFS_PID=$!
-  - sleep 10
+  - sleep 1
   - coverage run --source=ipfs_api_mount/ setup.py test
   - kill $IPFS_PID
   - codecov
