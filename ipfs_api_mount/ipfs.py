@@ -61,13 +61,13 @@ class CachedIPFS:
             if in_cache:
                 return value
 
-            if self._is_v0_object(cid):
-                # v0 object
+            if self._is_object(cid):
+                # object
                 object_data = self._load_object(cid)
                 return object_data.Data
 
             elif self._is_raw_block(cid):
-                # v1 raw block
+                # raw block
                 block = self.client.block.get(cid)
                 self.block_cache[cid] = block
                 return block
@@ -79,8 +79,8 @@ class CachedIPFS:
     def subblock_cids(self, cid):
         """ Get blocks linked from given IPFS object / block """
 
-        if self._is_v0_object(cid):
-            # v0 object
+        if self._is_object(cid):
+            # object
             with self.subblock_cids_cache.get_or_lock(cid) as (in_cache, value):
                 if in_cache:
                     return value
@@ -93,7 +93,7 @@ class CachedIPFS:
                 return subblock_cids
 
         elif self._is_raw_block(cid):
-            # v1 raw block - it has no subblocks
+            # raw block - it has no subblocks
             return []
 
         else:
@@ -105,8 +105,8 @@ class CachedIPFS:
         (in the same order as in subblock_cids)
         """
 
-        if self._is_v0_object(cid):
-            # v0 object
+        if self._is_object(cid):
+            # object
             with self.subblock_sizes_cache.get_or_lock(cid) as (in_cache, value):
                 if in_cache:
                     return value
@@ -115,7 +115,7 @@ class CachedIPFS:
                 return object_data.blocksizes
 
         elif self._is_raw_block(cid):
-            # v1 raw block - it has no subblocks
+            # raw block - it has no subblocks
             return []
 
         else:
@@ -149,13 +149,13 @@ class CachedIPFS:
             if in_cache:
                 return value
 
-            if self._is_v0_object(cid):
-                # v0 object
+            if self._is_object(cid):
+                # object
                 object_data = self._load_object(cid)
                 return object_data.filesize
 
             elif self._is_raw_block(cid):
-                # v1 raw block
+                # raw block
                 in_cache, block = self.block_cache.get(cid)
                 if in_cache:
                     size = len(block)
@@ -169,7 +169,7 @@ class CachedIPFS:
                 raise InvalidIPFSPathException()
 
     def cid_type(self, cid):
-        if self._is_v0_object(cid) or self._is_v1_object(cid):
+        if self._is_object(cid):
             with self.cid_type_cache.get_or_lock(cid) as (in_cache, value):
                 if in_cache:
                     return value
@@ -247,7 +247,7 @@ class CachedIPFS:
         return end
 
     def _load_object(self, cid):
-        """ Get v0 object data and fill relevant caches """
+        """ Get object data and fill relevant caches """
         object_data = unixfs_pb2.Data()
         object_data.ParseFromString(self.client.object.data(cid))
 
@@ -258,8 +258,19 @@ class CachedIPFS:
 
         return object_data
 
-    def _is_v0_object(self, cid):
-        return cid.startswith('Q')
+    def _is_object(self, cid):
+        if cid.startswith('Q'):
+            # v0 object
+            return True
+
+        try:
+            cid_bytes = multibase.decode(cid)
+        except ValueError:
+            logger.exception("encountered malformed object/block id")
+            return False
+
+        # v1 object
+        return cid_bytes.startswith(bytes([0x01, 0x70]))
 
     def _is_raw_block(self, cid):
         try:
@@ -268,16 +279,8 @@ class CachedIPFS:
             logger.exception("encountered malformed object/block id")
             return False
 
+        # v1 raw block
         return cid_bytes.startswith(bytes([0x01, 0x55]))
-
-    def _is_v1_object(self, cid):
-        try:
-            cid_bytes = multibase.decode(cid)
-        except ValueError:
-            logger.exception("encountered malformed object/block id")
-            return False
-
-        return cid_bytes.startswith(bytes([0x01, 0x70]))
 
 
 class LockingLRU:
