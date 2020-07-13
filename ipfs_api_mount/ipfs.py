@@ -1,4 +1,6 @@
 import logging
+import threading
+from contextlib import contextmanager
 
 from lru import LRU
 import ipfshttpclient
@@ -26,66 +28,69 @@ class CachedIPFS:
     ):
         self.client = ipfs_client
 
-        self.resolve_cache = LRU(attr_cache_size)
-        self.cid_type_cache = LRU(attr_cache_size)
-        self.path_size_cache = LRU(attr_cache_size)
-        self.ls_cache = LRU(ls_cache_size)
-        self.block_cache = LRU(block_cache_size)
-        self.subblock_cids_cache = LRU(link_cache_size)
-        self.subblock_sizes_cache = LRU(link_cache_size)
+        self.resolve_cache = LockingLRU(attr_cache_size)
+        self.cid_type_cache = LockingLRU(attr_cache_size)
+        self.path_size_cache = LockingLRU(attr_cache_size)
+        self.ls_cache = LockingLRU(ls_cache_size)
+        self.block_cache = LockingLRU(block_cache_size)
+        self.subblock_cids_cache = LockingLRU(link_cache_size)
+        self.subblock_sizes_cache = LockingLRU(link_cache_size)
 
     def resolve(self, path):
         """ Get CID (content id) of a path. """
-        if path in self.resolve_cache:
-            return self.resolve_cache[path]
+        with self.resolve_cache.get_or_lock(path) as (in_cache, value):
+            if in_cache:
+                return value
 
-        try:
-            absolute_path = self.client.resolve(path)['Path']
-        except ipfshttpclient.exceptions.ErrorResponse:
-            absolute_path = None
+            try:
+                absolute_path = self.client.resolve(path)['Path']
+            except ipfshttpclient.exceptions.ErrorResponse:
+                absolute_path = None
 
-        if absolute_path is None or not absolute_path.startswith('/ipfs/'):
-            self.resolve_cache[path] = None
-            return None
+            if absolute_path is None or not absolute_path.startswith('/ipfs/'):
+                self.resolve_cache[path] = None
+                return None
 
-        cid = absolute_path[6:]
-        self.resolve_cache[path] = cid
-        return cid
+            cid = absolute_path[6:]
+            self.resolve_cache[path] = cid
+            return cid
 
     def block(self, cid):
         """ Get payload of IPFS object or raw block """
-        if cid in self.block_cache:
-            return self.block_cache[cid]
+        with self.block_cache.get_or_lock(cid) as (in_cache, value):
+            if in_cache:
+                return value
 
-        if self._is_v0_object(cid):
-            # v0 object
-            object_data = self._load_object(cid)
-            return object_data.Data
+            if self._is_v0_object(cid):
+                # v0 object
+                object_data = self._load_object(cid)
+                return object_data.Data
 
-        elif self._is_raw_block(cid):
-            # v1 raw block
-            block = self.client.block.get(cid)
-            self.block_cache[cid] = block
-            return block
+            elif self._is_raw_block(cid):
+                # v1 raw block
+                block = self.client.block.get(cid)
+                self.block_cache[cid] = block
+                return block
 
-        else:
-            # unknown object type
-            raise InvalidIPFSPathException()
+            else:
+                # unknown object type
+                raise InvalidIPFSPathException()
 
     def subblock_cids(self, cid):
         """ Get blocks linked from given IPFS object / block """
 
         if self._is_v0_object(cid):
             # v0 object
-            if cid in self.subblock_cids_cache:
-                return self.subblock_cids_cache[cid]
+            with self.subblock_cids_cache.get_or_lock(cid) as (in_cache, value):
+                if in_cache:
+                    return value
 
-            subblock_cids = [
-                link['Hash']
-                for link in self.client.object.links(cid).get('Links', [])
-            ]
-            self.subblock_cids_cache[cid] = subblock_cids
-            return subblock_cids
+                subblock_cids = [
+                    link['Hash']
+                    for link in self.client.object.links(cid).get('Links', [])
+                ]
+                self.subblock_cids_cache[cid] = subblock_cids
+                return subblock_cids
 
         elif self._is_raw_block(cid):
             # v1 raw block - it has no subblocks
@@ -102,11 +107,12 @@ class CachedIPFS:
 
         if self._is_v0_object(cid):
             # v0 object
-            if cid in self.subblock_sizes_cache:
-                return self.subblock_sizes_cache[cid]
+            with self.subblock_sizes_cache.get_or_lock(cid) as (in_cache, value):
+                if in_cache:
+                    return value
 
-            object_data = self._load_object(cid)
-            return object_data.blocksizes
+                object_data = self._load_object(cid)
+                return object_data.blocksizes
 
         elif self._is_raw_block(cid):
             # v1 raw block - it has no subblocks
@@ -117,20 +123,21 @@ class CachedIPFS:
             raise InvalidIPFSPathException()
 
     def ls(self, path):
-        if path in self.ls_cache:
-            return self.ls_cache[path]
+        with self.ls_cache.get_or_lock(path) as (in_cache, value):
+            if in_cache:
+                return value
 
-        try:
-            ls_result = {
-                entry['Name']: entry
-                for entry in self.client.ls(path)['Objects'][0]['Links']
-            }
+            try:
+                ls_result = {
+                    entry['Name']: entry
+                    for entry in self.client.ls(path)['Objects'][0]['Links']
+                }
 
-        except ipfshttpclient.exceptions.ErrorResponse:
-            ls_result = None
+            except ipfshttpclient.exceptions.ErrorResponse:
+                ls_result = None
 
-        self.ls_cache[path] = ls_result
-        return ls_result
+            self.ls_cache[path] = ls_result
+            return ls_result
 
     def path_size(self, path):
         cid = self.resolve(path)
@@ -138,34 +145,37 @@ class CachedIPFS:
         if cid is None:
             return None
 
-        if cid in self.path_size_cache:
-            return self.path_size_cache[cid]
+        with self.path_size_cache.get_or_lock(cid) as (in_cache, value):
+            if in_cache:
+                return value
 
-        if self._is_v0_object(cid):
-            # v0 object
-            object_data = self._load_object(cid)
-            return object_data.filesize
+            if self._is_v0_object(cid):
+                # v0 object
+                object_data = self._load_object(cid)
+                return object_data.filesize
 
-        elif self._is_raw_block(cid):
-            # v1 raw block
-            if cid in self.block_cache:
-                size = len(self.block_cache[cid])
+            elif self._is_raw_block(cid):
+                # v1 raw block
+                in_cache, block = self.block_cache.get(cid)
+                if in_cache:
+                    size = len(block)
+                else:
+                    size = self.client.block.stat(cid)['Size']
+                self.path_size_cache[cid] = size
+                return size
+
             else:
-                size = self.client.block.stat(cid)['Size']
-            self.path_size_cache[cid] = size
-            return size
-
-        else:
-            # unknown object type
-            raise InvalidIPFSPathException()
+                # unknown object type
+                raise InvalidIPFSPathException()
 
     def cid_type(self, cid):
         if self._is_v0_object(cid) or self._is_v1_object(cid):
-            if cid in self.cid_type_cache:
-                return self.cid_type_cache[cid]
+            with self.cid_type_cache.get_or_lock(cid) as (in_cache, value):
+                if in_cache:
+                    return value
 
-            object_data = self._load_object(cid)
-            return object_data.Type
+                object_data = self._load_object(cid)
+                return object_data.Type
 
         elif self._is_raw_block(cid):
             return unixfs_pb2.Data.Raw
@@ -268,3 +278,53 @@ class CachedIPFS:
             return False
 
         return cid_bytes.startswith(bytes([0x01, 0x70]))
+
+
+class LockingLRU:
+    def __init__(self, *args, **kwargs):
+        self.cache = LRU(*args, **kwargs)
+        self.global_lock = threading.Lock()
+        self.key_events = {}
+
+    def get(self, key):
+        while True:
+            with self.global_lock:
+                if key in self.cache:
+                    return True, self.cache[key]
+                if key in self.key_events:
+                    key_event = self.key_events[key]
+                else:
+                    return False, None
+
+            key_event.wait()
+
+    @contextmanager
+    def get_or_lock(self, key):
+        value, event = self._get_value_or_release_event(key)
+        if event:
+            try:
+                yield False, None
+            finally:
+                with self.global_lock:
+                    del self.key_events[key]
+                event.set()
+        else:
+            yield True, value
+
+    def __setitem__(self, key, value):
+        with self.global_lock:
+            self.cache[key] = value
+
+    def _get_value_or_release_event(self, key):
+        while True:
+            with self.global_lock:
+                if key in self.cache:
+                    return self.cache[key], None
+                if key in self.key_events:
+                    key_event = self.key_events[key]
+                else:
+                    key_event = threading.Event()
+                    self.key_events[key] = key_event
+                    return None, key_event
+
+            key_event.wait()

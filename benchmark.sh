@@ -19,6 +19,7 @@ echo "### ipfs cat $data"
 time { ipfs cat "$data" >/dev/null 2>&1; }
 echo
 
+
 tmp_mnt=$(mktemp -d)
 echo "### ipfs-api-mount $data_in_dir $tmp_mnt"
 ipfs-api-mount --background "$data_in_dir" "$tmp_mnt"
@@ -28,8 +29,17 @@ fusermount -u "$tmp_mnt"
 echo
 rmdir "$tmp_mnt"
 
+
+tmp_mnt=$(mktemp -d)
+echo "### ipfs-api-mount --no-threads $data_in_dir $tmp_mnt"
+ipfs-api-mount --background --no-threads "$data_in_dir" "$tmp_mnt"
+echo "### cat $tmp_mnt/data"
+time cat "$tmp_mnt/data" >/dev/null
+fusermount -u "$tmp_mnt"
+echo
+rmdir "$tmp_mnt"
+
+
 echo "### cat /ipfs/$data"
 time cat "/ipfs/$data" >/dev/null
 echo
-
-
