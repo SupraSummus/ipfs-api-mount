@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 from setuptools import setup
-from distutils.command.build import build
+from setuptools.command.build_py import build_py
 from setuptools.command.develop import develop
 from subprocess import check_call
 
@@ -9,11 +9,11 @@ def compile_protobuf():
     check_call(['protoc', '--python_out=.', 'ipfs_api_mount/unixfs.proto'])
 
 
-class custom_build(build):
+class custom_build_py(build_py):
     def run(self):
         if not self.dry_run:
             compile_protobuf()
-        build.run(self)
+        build_py.run(self)
 
 
 class custom_develop(develop):
@@ -49,7 +49,7 @@ setup(
         'ipfs_api_mount': ['ipfs_api_mount/unixfs.proto'],
     },
     cmdclass={
-        'build': custom_build,
+        'build_py': custom_build_py,
         'develop': custom_develop,
     },
 )

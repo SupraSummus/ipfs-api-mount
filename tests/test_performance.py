@@ -4,7 +4,7 @@ import subprocess
 
 from ipfs_api_mount.ipfs_mounted import ipfs_mounted
 
-from .tools import ipfs_dir, ipfs_file, ipfs_client, request_count_measurement
+from tools import ipfs_dir, ipfs_file, ipfs_client, request_count_measurement
 
 
 class FilePerformanceTestCase(TestCase):

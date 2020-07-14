@@ -1,6 +1,9 @@
+.coverage
+.eggs/
+.tox/
+*.pyc
 build/
+coverage.xml
 dist/
 ipfs_api_mount.egg-info/
 ipfs_api_mount/unixfs_pb2.py
-*.pyc
-.eggs/

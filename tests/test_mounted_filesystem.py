@@ -5,7 +5,7 @@ import subprocess
 from ipfs_api_mount import InvalidIPFSPathException
 from ipfs_api_mount.ipfs_mounted import ipfs_mounted
 
-from .tools import ipfs_client, ipfs_dir, ipfs_file
+from tools import ipfs_client, ipfs_dir, ipfs_file
 
 
 class DirectoryTestCase(TestCase):

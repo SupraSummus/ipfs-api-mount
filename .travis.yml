@@ -1,3 +1,6 @@
+branches:
+  only:
+    - master
 language: python
 python:
   - "3.6"
@@ -16,19 +19,17 @@ before_install:
   - sudo chmod 666 /dev/fuse
   - sudo chown root:$USER /etc/fuse.conf
 install:
-  - pip install -r requirements.txt
-  - pip install coverage codecov
+  - pip install tox codecov
   - curl https://dist.ipfs.io/go-ipfs/v${GO_IPFS_VERSION}/go-ipfs_v${GO_IPFS_VERSION}_linux-amd64.tar.gz | tar xvz
   - export PATH=$PATH:$(pwd)/go-ipfs
   - curl -L https://github.com/protocolbuffers/protobuf/releases/download/v${PROTOC_VERSION}/protoc-${PROTOC_VERSION}-linux-x86_64.zip > protoc.zip
   - sudo unzip -d /usr/local protoc.zip
   - sudo chmod a+x /usr/local/bin/protoc
-  - python setup.py build
 script:
-  - flake8
+  - tox -e flake8
   - ipfs daemon --offline --init &
   - IPFS_PID=$!
-  - sleep 10
-  - coverage run --source=ipfs_api_mount/ setup.py test
+  - sleep 1
+  - tox -e $(echo py${TRAVIS_PYTHON_VERSION} | tr -d . | sed -e 's/pypypy/pypy/')
   - kill $IPFS_PID
   - codecov
