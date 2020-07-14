@@ -8,7 +8,7 @@ from ipfs_api_mount.ipfs_mounted import ipfs_mounted
 from tools import ipfs_dir, ipfs_file, ipfs_client, request_count_measurement
 
 
-@pytest.mark.parametrize("multithreaded", [False, True])
+@pytest.mark.parametrize('multithreaded', [False, True])
 def test_file_read(multithreaded):
     """ Reading a file causes at most as many requests as there are blocks in the file. """
     chunk_count = 100
@@ -31,7 +31,7 @@ def test_file_read(multithreaded):
             assert mocked_request.call_count < 1.2 * chunk_count
 
 
-@pytest.mark.parametrize("multithreaded", [False, True])
+@pytest.mark.parametrize('multithreaded', [False, True])
 def test_file_attribute_cache(multithreaded):
     """ Getting file attributes second time causes no new requests """
     n = 100
