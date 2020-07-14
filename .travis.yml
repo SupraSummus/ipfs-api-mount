@@ -3,6 +3,7 @@ python:
   - "3.6"
   - "3.7"
   - "3.8"
+  - "pypy3"
 env:
   global:
     - PROTOC_VERSION=3.12.0
@@ -28,7 +29,7 @@ script:
   - flake8
   - ipfs daemon --offline --init &
   - IPFS_PID=$!
-  - sleep 10
+  - sleep 1
   - coverage run --source=ipfs_api_mount/ setup.py test
   - kill $IPFS_PID
   - codecov
