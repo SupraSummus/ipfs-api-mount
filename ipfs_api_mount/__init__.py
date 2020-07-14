@@ -3,7 +3,7 @@ import logging
 import os
 import stat
 
-import fuse
+from refuse import high as fuse
 import ipfshttpclient
 
 from .ipfs import CachedIPFS, InvalidIPFSPathException
