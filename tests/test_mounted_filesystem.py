@@ -2,6 +2,8 @@ from unittest import TestCase
 import os
 import subprocess
 
+import pytest
+
 from ipfs_api_mount import InvalidIPFSPathException
 from ipfs_api_mount.ipfs_mounted import ipfs_mounted
 
@@ -69,61 +71,36 @@ class DirectoryTestCase(TestCase):
             )
 
 
-class FileTestCase(TestCase):
-    def test_small_file_read(self):
-        content = b'I forgot newline at the end. Ups.'
-        root = ipfs_dir({'file': ipfs_file(content)})
-        with ipfs_mounted(root, ipfs_client) as mountpoint:
-            with open(os.path.join(mountpoint, 'file'), 'rb') as f:
-                self.assertEqual(
-                    f.read(),
-                    content,
-                )
+@pytest.mark.parametrize('content', [
+    b'I forgot newline at the end. Oops.',
+    10 * 1024 * 1024,
+])
+@pytest.mark.parametrize('raw_leaves', [False, True])
+@pytest.mark.parametrize('multithreaded', [False, True])
+def test_small_file_read(content, raw_leaves, multithreaded):
+    # apparently you can't pass large things via parametrize
+    if isinstance(content, int):
+        content = os.urandom(content)
+    root = ipfs_dir({'file': ipfs_file(content, raw_leaves=raw_leaves)})
+    with ipfs_mounted(
+        root, ipfs_client,
+        multithreaded=multithreaded,
+    ) as mountpoint:
+        with open(os.path.join(mountpoint, 'file'), 'rb') as f:
+            assert f.read() == content
 
-    def test_10MiB_file_read(self):
-        content = os.urandom(10 * 1024 * 1024)
-        root = ipfs_dir({'file': ipfs_file(content)})
-        with ipfs_mounted(root, ipfs_client) as mountpoint:
-            with open(os.path.join(mountpoint, 'file'), 'rb') as f:
-                self.assertEqual(
-                    f.read(),
-                    content,
-                )
 
-    def test_raw_leaves_small_file_read(self):
-        content = b'precious'
-        root = ipfs_dir({'file': ipfs_file(content, raw_leaves=True)})
-        with ipfs_mounted(root, ipfs_client) as mountpoint:
-            with open(os.path.join(mountpoint, 'file'), 'rb') as f:
-                self.assertEqual(
-                    f.read(),
-                    content,
-                )
-
-    def test_raw_leaves_10MiB_file(self):
-        content = os.urandom(10 * 1024 * 1024)
-        root = ipfs_dir({'file': ipfs_file(content, raw_leaves=True)})
-        with ipfs_mounted(root, ipfs_client) as mountpoint:
-            with open(os.path.join(mountpoint, 'file'), 'rb') as f:
-                self.assertEqual(
-                    f.read(),
-                    content,
-                )
-
-    def test_cid_version_1_small_file(self):
-        content = "this is next gen file"
-        root = subprocess.run(
-            f'echo "{content}" | ipfs add --cid-version 1 --wrap-with-directory --quieter --stdin-name file',
-            shell=True,
-            check=True,
-            stdout=subprocess.PIPE,
-        ).stdout.decode('ascii').strip()
-        with ipfs_mounted(root, ipfs_client) as mountpoint:
-            with open(os.path.join(mountpoint, 'file'), 'rb') as f:
-                self.assertEqual(
-                    f.read().decode('ascii'),
-                    content + '\n',
-                )
+def test_cid_version_1_small_file():
+    content = "this is next gen file"
+    root = subprocess.run(
+        f'echo "{content}" | ipfs add --cid-version 1 --wrap-with-directory --quieter --stdin-name file',
+        shell=True,
+        check=True,
+        stdout=subprocess.PIPE,
+    ).stdout.decode('ascii').strip()
+    with ipfs_mounted(root, ipfs_client) as mountpoint:
+        with open(os.path.join(mountpoint, 'file'), 'rb') as f:
+            assert f.read().decode('ascii') == content + '\n'
 
 
 class ErrorsTestCase(TestCase):
