@@ -1,4 +1,3 @@
-from unittest import TestCase
 import os
 import subprocess
 
@@ -10,65 +9,69 @@ from ipfs_api_mount.ipfs_mounted import ipfs_mounted
 from tools import ipfs_client, ipfs_dir, ipfs_file
 
 
-class DirectoryTestCase(TestCase):
-    def test_empty_dir(self):
-        root = ipfs_dir({})
-        with ipfs_mounted(root, ipfs_client) as mountpoint:
-            self.assertEqual(
-                os.listdir(mountpoint),
-                [],
-            )
+@pytest.mark.parametrize('entries', [[], ['aaa', 'bbb']])
+@pytest.mark.parametrize('multithreaded', [False, True])
+def test_dir_read(entries, multithreaded):
+    root = ipfs_dir({
+        name: ipfs_dir({})
+        for name in entries
+    })
+    with ipfs_mounted(
+        root, ipfs_client,
+        multithreaded=multithreaded,
+    ) as mountpoint:
+        assert sorted(os.listdir(mountpoint)) == sorted(entries)
 
-    def test_nonempty_dir(self):
-        root = ipfs_dir({
-            'aaa': ipfs_dir({}),
-            'bbb': ipfs_dir({}),
-        })
-        with ipfs_mounted(root, ipfs_client) as mountpoint:
-            self.assertEqual(
-                os.listdir(mountpoint),
-                ['aaa', 'bbb'],
-            )
 
-    def test_file_times(self):
-        """creation/modification/access times for a file are all 0"""
-        root = ipfs_dir({
-            'bbb': ipfs_file(b'blabla'),
-        })
-        with ipfs_mounted(root, ipfs_client) as mountpoint:
-            s = os.stat(os.path.join(mountpoint, 'bbb'))
-            self.assertEqual(s.st_ctime, 0)
-            self.assertEqual(s.st_mtime, 0)
-            self.assertEqual(s.st_atime, 0)
+@pytest.mark.parametrize('multithreaded', [False, True])
+def test_file_times(multithreaded):
+    """creation/modification/access times for a file are all 0"""
+    root = ipfs_dir({
+        'bbb': ipfs_file(b'blabla'),
+    })
+    with ipfs_mounted(
+        root, ipfs_client,
+        multithreaded=multithreaded,
+    ) as mountpoint:
+        s = os.stat(os.path.join(mountpoint, 'bbb'))
+        assert s.st_ctime == 0
+        assert s.st_mtime == 0
+        assert s.st_atime == 0
 
-    def test_permission(self):
-        root = ipfs_dir({})
-        with ipfs_mounted(root, ipfs_client) as mountpoint:
-            s = os.stat(mountpoint)
-            self.assertEqual(
-                s.st_mode,
-                0o40555,
-            )
 
-    def test_permission_nested(self):
-        root = ipfs_dir({
-            'dir': ipfs_dir({}),
-        })
-        with ipfs_mounted(root, ipfs_client) as mountpoint:
-            s = os.stat(os.path.join(mountpoint, 'dir'))
-            self.assertEqual(
-                s.st_mode,
-                0o40555,
-            )
+@pytest.mark.parametrize('multithreaded', [False, True])
+def test_permission(multithreaded):
+    root = ipfs_dir({})
+    with ipfs_mounted(
+        root, ipfs_client,
+        multithreaded=multithreaded,
+    ) as mountpoint:
+        s = os.stat(mountpoint)
+        assert s.st_mode == 0o40555
 
-    def test_cid_version_1(self):
-        # constant cid because i'm lazy
-        root = "bafybeiczsscdsbs7ffqz55asqdf3smv6klcw3gofszvwlyarci47bgf354"
-        with ipfs_mounted(root, ipfs_client) as mountpoint:
-            self.assertEqual(
-                os.listdir(mountpoint),
-                [],
-            )
+
+@pytest.mark.parametrize('multithreaded', [False, True])
+def test_permission_nested(multithreaded):
+    root = ipfs_dir({
+        'dir': ipfs_dir({}),
+    })
+    with ipfs_mounted(
+        root, ipfs_client,
+        multithreaded=multithreaded,
+    ) as mountpoint:
+        s = os.stat(os.path.join(mountpoint, 'dir'))
+        assert s.st_mode == 0o40555
+
+
+@pytest.mark.parametrize('multithreaded', [False, True])
+def test_cid_version_1(multithreaded):
+    # constant cid because i'm lazy
+    root = "bafybeiczsscdsbs7ffqz55asqdf3smv6klcw3gofszvwlyarci47bgf354"
+    with ipfs_mounted(
+        root, ipfs_client,
+        multithreaded=multithreaded,
+    ) as mountpoint:
+        assert os.listdir(mountpoint) == []
 
 
 @pytest.mark.parametrize('content', [
@@ -90,7 +93,8 @@ def test_small_file_read(content, raw_leaves, multithreaded):
             assert f.read() == content
 
 
-def test_cid_version_1_small_file():
+@pytest.mark.parametrize('multithreaded', [False, True])
+def test_cid_version_1_small_file(multithreaded):
     content = "this is next gen file"
     root = subprocess.run(
         f'echo "{content}" | ipfs add --cid-version 1 --wrap-with-directory --quieter --stdin-name file',
@@ -98,40 +102,58 @@ def test_cid_version_1_small_file():
         check=True,
         stdout=subprocess.PIPE,
     ).stdout.decode('ascii').strip()
-    with ipfs_mounted(root, ipfs_client) as mountpoint:
+    with ipfs_mounted(
+        root, ipfs_client,
+        multithreaded=multithreaded,
+    ) as mountpoint:
         with open(os.path.join(mountpoint, 'file'), 'rb') as f:
             assert f.read().decode('ascii') == content + '\n'
 
 
-class ErrorsTestCase(TestCase):
-    def test_invalid_root_hash(self):
-        """ we should refuse to mount invalid hash """
-        with self.assertRaises(InvalidIPFSPathException):
-            with ipfs_mounted('straight/to/nonsense', ipfs_client):
-                pass
+@pytest.mark.parametrize('multithreaded', [False, True])
+def test_invalid_root_hash(multithreaded):
+    """ we should refuse to mount invalid hash """
+    with pytest.raises(InvalidIPFSPathException):
+        with ipfs_mounted(
+            'straight/to/nonsense', ipfs_client,
+            multithreaded=multithreaded,
+        ):
+            pass
 
-    def test_file_root_hash(self):
-        """ we should refuse to mount something that is a file (dir is needed) """
-        root = ipfs_file(b'definetly not a dir')
-        with self.assertRaises(InvalidIPFSPathException):
-            with ipfs_mounted(root, ipfs_client):
-                pass
 
-    def test_complex_root_hash(self):
-        root = ipfs_dir({
-            'nested_dir': ipfs_dir({
-                'empty_dir': ipfs_dir({}),
-            }),
-        })
-        with ipfs_mounted(root + '/nested_dir', ipfs_client) as mountpoint:
-            self.assertEqual(
-                os.listdir(mountpoint),
-                ['empty_dir'],
-            )
+@pytest.mark.parametrize('multithreaded', [False, True])
+def test_file_root_hash(multithreaded):
+    """ we should refuse to mount something that is a file (dir is needed) """
+    root = ipfs_file(b'definetly not a dir')
+    with pytest.raises(InvalidIPFSPathException):
+        with ipfs_mounted(
+            root, ipfs_client,
+            multithreaded=multithreaded,
+        ):
+            pass
 
-    def test_nonexistent_file(self):
-        """ there is no way we can open nonexistent file """
-        root = ipfs_dir({})
-        with ipfs_mounted(root, ipfs_client) as mountpoint:
-            with self.assertRaises(FileNotFoundError):
-                open(os.path.join(mountpoint, 'a_file'), 'rb')
+
+@pytest.mark.parametrize('multithreaded', [False, True])
+def test_complex_root_hash(multithreaded):
+    root = ipfs_dir({
+        'nested_dir': ipfs_dir({
+            'empty_dir': ipfs_dir({}),
+        }),
+    })
+    with ipfs_mounted(
+        root + '/nested_dir', ipfs_client,
+        multithreaded=multithreaded,
+    ) as mountpoint:
+        assert os.listdir(mountpoint) == ['empty_dir']
+
+
+@pytest.mark.parametrize('multithreaded', [False, True])
+def test_nonexistent_file(multithreaded):
+    """ there is no way we can open nonexistent file """
+    root = ipfs_dir({})
+    with ipfs_mounted(
+        root, ipfs_client,
+        multithreaded=multithreaded,
+    ) as mountpoint:
+        with pytest.raises(FileNotFoundError):
+            open(os.path.join(mountpoint, 'a_file'), 'rb')
