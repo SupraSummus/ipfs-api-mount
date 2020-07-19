@@ -6,7 +6,7 @@ import stat
 import fuse
 import ipfshttpclient
 
-from .ipfs import CachedIPFS, InvalidIPFSPathException
+from ipfs_api_mount.ipfs import CachedIPFS, InvalidIPFSPathException
 
 
 logger = logging.getLogger(__name__)
@@ -132,10 +132,3 @@ class IPFSMount(fuse.Operations):
 
     getxattr = None
     listxattr = None
-
-
-fuse_kwargs = dict(
-    auto_unmount=True,
-    ro=True,
-    kernel_cache=True,
-)
