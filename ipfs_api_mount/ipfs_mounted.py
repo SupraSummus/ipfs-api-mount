@@ -6,7 +6,7 @@ import time
 
 import fuse
 
-from . import IPFSMount, fuse_kwargs
+from .fuse_operations import IPFSMount, fuse_kwargs
 
 
 class IPFSMountTimeout(Exception):
@@ -92,6 +92,9 @@ def ipfs_mounted(
                 if time.monotonic() - waiting_start > mount_timeout:
                     raise IPFSMountTimeout()
                 time.sleep(0.01)
+
+            # dirty dirty - but sometimes FUSE is not ready immediately, despite being listed in /proc/mounts
+            time.sleep(0.1)
 
             # do wrapped things
             yield mountpoint

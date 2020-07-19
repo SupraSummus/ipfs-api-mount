@@ -8,7 +8,8 @@ import sys
 import fuse
 import ipfshttpclient
 
-from ipfs_api_mount import IPFSMount, fuse_kwargs, __version__
+from ipfs_api_mount import __version__
+from ipfs_api_mount.fuse_operations import IPFSMount, fuse_kwargs
 
 
 if __name__ == '__main__':
