@@ -30,6 +30,9 @@ class IPFSMount(fuse.Operations):
         if not self.ipfs.path_is_dir(self.root):
             raise InvalidIPFSPathException("root path is not a directory")
 
+    def get_ipfs_path(self, path):
+        return self.root + path
+
     def open(self, path, flags):
         write_flags = (
             os.O_WRONLY |
@@ -43,7 +46,7 @@ class IPFSMount(fuse.Operations):
             raise fuse.FuseOSError(errno.EROFS)
 
         try:
-            full_path = self.root + path
+            full_path = self.get_ipfs_path(path)
             if not self.ipfs.path_is_dir(full_path) and not self.ipfs.path_is_file(full_path):
                 logger.warning('strange entity type at %s', full_path)
                 fuse.FuseOSError(errno.ENOENT)
@@ -59,7 +62,7 @@ class IPFSMount(fuse.Operations):
         return 0
 
     def read(self, path, size, offset, fh):
-        full_path = self.root + path
+        full_path = self.get_ipfs_path(path)
 
         try:
             if self.ipfs.path_is_dir(full_path):
@@ -82,7 +85,7 @@ class IPFSMount(fuse.Operations):
             raise fuse.FuseOSError(errno.EAGAIN) from e
 
     def readdir(self, path, fh):
-        full_path = self.root + path
+        full_path = self.get_ipfs_path(path)
         try:
             ls_result = self.ipfs.ls(full_path)
         except ipfshttpclient.exceptions.TimeoutError as e:
@@ -95,7 +98,7 @@ class IPFSMount(fuse.Operations):
         return ['.', '..'] + list(ls_result.keys())
 
     def getattr(self, path, fh=None):
-        full_path = self.root + path
+        full_path = self.get_ipfs_path(path)
         try:
             if self.ipfs.path_is_dir(full_path):
                 st_mode = (

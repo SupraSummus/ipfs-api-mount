@@ -44,7 +44,10 @@ setup(
         'py-multibase==1.*',
     ],
     packages=find_packages(),
-    scripts=['bin/ipfs-api-mount'],
+    scripts=[
+        'bin/ipfs-api-mount',
+        'bin/ipfs-api-mount-whole',
+    ],
     package_data={
         'ipfs_api_mount': ['ipfs_api_mount/unixfs.proto'],
     },

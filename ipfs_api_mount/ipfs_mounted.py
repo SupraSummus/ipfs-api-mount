@@ -17,19 +17,21 @@ class IPFSFUSEThread(Thread):
     def __init__(
         self,
         mountpoint,
-        *args,
+        *fuse_operations_args,
+        fuse_operations_class=IPFSMount,
         multithreaded=True,
         max_read=0,  # 0 means default (no read size limit)
         attr_timeout=1.0,  # 1s - default value according to manpage
-        **kwargs,
+        **fuse_operations_kwargs,
     ):
         super().__init__()
         self.mountpoint = mountpoint
+        self.fuse_operations_class = fuse_operations_class
         self.multithreaded = multithreaded
         self.max_read = max_read
         self.attr_timeout = attr_timeout
-        self.args = args
-        self.kwargs = kwargs
+        self.fuse_operations_args = fuse_operations_args
+        self.fuse_operations_kwargs = fuse_operations_kwargs
 
     def run(self):
         self.exc = None
@@ -44,9 +46,9 @@ class IPFSFUSEThread(Thread):
             raise self.exc
 
     def mount(self):
-        ipfs_mount = IPFSMount(
-            *self.args,
-            **self.kwargs,
+        ipfs_mount = self.fuse_operations_class(
+            *self.fuse_operations_args,
+            **self.fuse_operations_kwargs,
         )
         fuse.FUSE(
             ipfs_mount,
