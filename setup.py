@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-from setuptools import setup
+from setuptools import setup, find_packages
 from setuptools.command.build_py import build_py
 from setuptools.command.develop import develop
 from subprocess import check_call
@@ -43,7 +43,7 @@ setup(
         'protobuf>=3.12,<4',
         'py-multibase==1.*',
     ],
-    packages=['ipfs_api_mount'],
+    packages=find_packages(),
     scripts=['bin/ipfs-api-mount'],
     package_data={
         'ipfs_api_mount': ['ipfs_api_mount/unixfs.proto'],
