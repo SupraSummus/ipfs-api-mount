@@ -24,7 +24,6 @@ class IPFSMount(fuse.Operations):
         self.root = root
         self.ipfs = CachedIPFS(ipfs_client, **kwargs)
 
-        # this shouldn't be called before `ready` is set because it may throw an exception and hang forever
         self._validate_root_path()
 
     def _validate_root_path(self):
