@@ -1,7 +1,8 @@
 from .high import IPFSMount
+from .high_whole import WholeIPFSOperations
 
 
-__all__ = ['IPFSMount', 'fuse_kwargs']
+__all__ = ['IPFSMount', 'fuse_kwargs', 'WholeIPFSOperations']
 
 
 fuse_kwargs = dict(
