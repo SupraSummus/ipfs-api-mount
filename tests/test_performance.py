@@ -1,15 +1,10 @@
 import os
 import subprocess
 
-import pytest
-
-from ipfs_api_mount.ipfs_mounted import ipfs_mounted
-
 from tools import ipfs_dir, ipfs_file, ipfs_client, request_count_measurement
 
 
-@pytest.mark.parametrize('multithreaded', [False, True])
-def test_file_read(multithreaded):
+def test_file_read(ipfs_mounted):
     """ Reading a file causes at most as many requests as there are blocks in the file. """
     chunk_count = 100
     chunk_size = 4096
@@ -20,7 +15,6 @@ def test_file_read(multithreaded):
         root, ipfs_client,
         link_cache_size=4,
         max_read=chunk_size,  # prevent FUSE from doing large reads to exagerate cache effects
-        multithreaded=multithreaded,
     ) as mountpoint:
         with request_count_measurement(ipfs_client) as mocked_request:
 
@@ -31,8 +25,7 @@ def test_file_read(multithreaded):
             assert mocked_request.call_count < 1.2 * chunk_count
 
 
-@pytest.mark.parametrize('multithreaded', [False, True])
-def test_file_attribute_cache(multithreaded):
+def test_file_attribute_cache(ipfs_mounted):
     """ Getting file attributes second time causes no new requests """
     n = 100
     root = ipfs_dir({
@@ -51,7 +44,6 @@ def test_file_attribute_cache(multithreaded):
         root, ipfs_client,
         attr_cache_size=int(n * 0.9),
         attr_timeout=0,  # disable FUSE-level caching
-        multithreaded=multithreaded,
     ) as mountpoint:
         subprocess.run(['ls', '-l', mountpoint], **ls_kwargs)
         with request_count_measurement(ipfs_client) as mocked:
@@ -63,7 +55,6 @@ def test_file_attribute_cache(multithreaded):
         root, ipfs_client,
         attr_cache_size=int(n * 1.1),
         attr_timeout=0,  # disable FUSE-level caching
-        multithreaded=multithreaded,
     ) as mountpoint:
         subprocess.run(['ls', '-l', mountpoint], **ls_kwargs)
         with request_count_measurement(ipfs_client) as mocked:

@@ -1,8 +1,11 @@
 import subprocess
 
+import pytest
+
 import ipfs_api_mount
 
 
-def test_version():
-    version_string = subprocess.check_output(['ipfs-api-mount', '--version'])
-    assert version_string == ('ipfs-api-mount ' + ipfs_api_mount.__version__ + '\n').encode()
+@pytest.mark.parametrize('script', ['ipfs-api-mount', 'ipfs-api-mount-whole'])
+def test_version(script):
+    version_string = subprocess.check_output([script, '--version'])
+    assert version_string == (script + ' ' + ipfs_api_mount.__version__ + '\n').encode()
