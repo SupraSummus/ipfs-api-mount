@@ -6,6 +6,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 Well, at least this is the intention.
 
 ## [Unreleased]
+### Added
+ * Mounting whole IPFS namesace at once (`ipfs-api-mount-whole`)
+ * Deduplicating daemon requests when using multiple threads - this may improve performance in some multithreaded scenarios
+ * Configured tox+pytests test suite with beautiful parametrized test cases
+
+### Fixed
+ * More robust support for v1 CIDs
 
 ## [0.3.2] - 2020-07-12
 ### Added
