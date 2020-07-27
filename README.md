@@ -33,6 +33,15 @@ To unmount
 
     fusermount -u a_dir
 
+### Mount whole IPFS at once
+
+Apart from mounting one specified CID you can also mount whole IPFS namespace. This is similar to `ipfs mount` provided in go-ipfs.
+
+    mkdir a_dir
+    ipfs-api-mount-whole --background a_dir
+    ls a_dir/QmXoypizjW3WknFiJnKLwHCnL72vedxjQkDDP1mXWo6uco
+    # -  I  index.html  M  wiki
+
 ### Python-level use
 
 Mountpoints can be created inside python programs
