@@ -30,6 +30,7 @@ class Command:
         parser.add_argument('--allow-other', action='store_true', help='Set fuse mount option \'allow_other\'')
         parser.add_argument('--api-host', type=str, default='127.0.0.1', help='IPFS API host')
         parser.add_argument('--api-port', type=int, default=5001, help='IPFS API port')
+        parser.add_argument('--timeout', type=float, default=30.0, help='Timeout for daemon requests, in seconds')
         parser.add_argument(
             "-l", "--log",
             dest='log', default=sys.stderr, type=argparse.FileType('w'),
@@ -77,6 +78,7 @@ class Command:
             block_cache_size=args.block_cache_size,
             link_cache_size=args.link_cache_size,
             attr_cache_size=args.attr_cache_size,
+            timeout=args.timeout,
         )
 
     def get_fuse_operations_instance(self, args):
