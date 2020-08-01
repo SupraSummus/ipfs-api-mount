@@ -6,6 +6,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 Well, at least this is the intention.
 
 ## [Unreleased]
+### Added
+ * `--timeout` parameter
 
 ## [0.3.3] - 2020-07-28
 ### Added

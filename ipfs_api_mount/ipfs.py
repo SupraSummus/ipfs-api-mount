@@ -25,8 +25,12 @@ class CachedIPFS:
         ls_cache_size=64,
         block_cache_size=16,  # ~16MB assuming 1MB max block size
         link_cache_size=256,
+        timeout=30.0,  # in seconds
     ):
         self.client = ipfs_client
+        self.client_request_kwargs = {
+            'timeout': timeout,
+        }
 
         self.resolve_cache = LockingLRU(attr_cache_size)
         self.cid_type_cache = LockingLRU(attr_cache_size)
@@ -43,7 +47,7 @@ class CachedIPFS:
                 return value
 
             try:
-                absolute_path = self.client.resolve(path)['Path']
+                absolute_path = self.client.resolve(path, **self.client_request_kwargs)['Path']
             except ipfshttpclient.exceptions.ErrorResponse:
                 absolute_path = None
 
@@ -68,7 +72,7 @@ class CachedIPFS:
 
             elif self._is_raw_block(cid):
                 # raw block
-                block = self.client.block.get(cid)
+                block = self.client.block.get(cid, **self.client_request_kwargs)
                 self.block_cache[cid] = block
                 return block
 
@@ -87,7 +91,10 @@ class CachedIPFS:
 
                 subblock_cids = [
                     link['Hash']
-                    for link in self.client.object.links(cid).get('Links', [])
+                    for link in self.client.object.links(
+                        cid,
+                        **self.client_request_kwargs,
+                    ).get('Links', [])
                 ]
                 self.subblock_cids_cache[cid] = subblock_cids
                 return subblock_cids
@@ -130,7 +137,10 @@ class CachedIPFS:
             try:
                 ls_result = {
                     entry['Name']: entry
-                    for entry in self.client.ls(path)['Objects'][0]['Links']
+                    for entry in self.client.ls(
+                        path,
+                        **self.client_request_kwargs,
+                    )['Objects'][0]['Links']
                 }
 
             except ipfshttpclient.exceptions.ErrorResponse:
@@ -160,7 +170,10 @@ class CachedIPFS:
                 if in_cache:
                     size = len(block)
                 else:
-                    size = self.client.block.stat(cid)['Size']
+                    size = self.client.block.stat(
+                        cid,
+                        **self.client_request_kwargs,
+                    )['Size']
                 self.path_size_cache[cid] = size
                 return size
 
@@ -249,7 +262,10 @@ class CachedIPFS:
     def _load_object(self, cid):
         """ Get object data and fill relevant caches """
         object_data = unixfs_pb2.Data()
-        object_data.ParseFromString(self.client.object.data(cid))
+        object_data.ParseFromString(self.client.object.data(
+            cid,
+            **self.client_request_kwargs,
+        ))
 
         self.cid_type_cache[cid] = object_data.Type
         self.path_size_cache[cid] = object_data.filesize

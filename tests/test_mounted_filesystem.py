@@ -1,7 +1,10 @@
+from unittest import mock
+import errno
 import os
 import subprocess
 
 import pytest
+import ipfshttpclient
 
 import ipfs_api_mount
 from ipfs_api_mount.ipfs import InvalidIPFSPathException
@@ -137,3 +140,33 @@ def test_nonexistent_file(ipfs_mounted):
     ) as mountpoint:
         with pytest.raises(FileNotFoundError):
             open(os.path.join(mountpoint, 'a_file'), 'rb')
+
+
+def test_timeout_while_read(ipfs_mounted):
+    root = ipfs_dir({
+        'a_file': ipfs_file(b'blabla\n')
+    })
+    with ipfs_mounted(
+        root, ipfs_client,
+        timeout=0.123,
+    ) as mountpoint:
+        with open(os.path.join(mountpoint, 'a_file'), 'rb') as f:
+            fd = f.fileno()
+
+            # timeout error is signaled
+            with mock.patch.object(
+                ipfshttpclient.http.ClientSync,
+                '_request',
+                side_effect=ipfshttpclient.exceptions.TimeoutError(None),
+            ) as _request_mocked:
+                with pytest.raises(OSError) as excinfo:
+                    os.read(fd, 1)
+            assert excinfo.value.errno == errno.EAGAIN
+
+            # timeout value is passed to client
+            _request_mocked.assert_called()
+            for call in _request_mocked.call_args_list:
+                call.kwargs['timeout'] == 0.123
+
+            # without timeouted request there is no error
+            os.read(fd, 1)
