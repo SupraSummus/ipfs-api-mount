@@ -166,7 +166,8 @@ def test_timeout_while_read(ipfs_mounted):
             # timeout value is passed to client
             _request_mocked.assert_called()
             for call in _request_mocked.call_args_list:
-                call.kwargs['timeout'] == 0.123
+                call_kwargs = call[1]
+                call_kwargs['timeout'] == 0.123
 
             # without timeouted request there is no error
             os.read(fd, 1)
