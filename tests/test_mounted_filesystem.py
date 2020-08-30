@@ -1,7 +1,6 @@
 from unittest import mock
 import errno
 import os
-import subprocess
 
 import pytest
 import ipfshttpclient
@@ -72,31 +71,21 @@ def test_cid_version_1(ipfs_mounted):
     10 * 1024 * 1024,
 ])
 @pytest.mark.parametrize('raw_leaves', [False, True])
-def test_small_file_read(ipfs_mounted, content, raw_leaves):
+@pytest.mark.parametrize('cid_version', [0, 1])
+def test_file_read(ipfs_mounted, content, raw_leaves, cid_version):
     # apparently you can't pass large things via parametrize
     if isinstance(content, int):
         content = os.urandom(content)
-    root = ipfs_dir({'file': ipfs_file(content, raw_leaves=raw_leaves)})
+    root = ipfs_dir({'file': ipfs_file(
+        content,
+        raw_leaves=raw_leaves,
+        cid_version=cid_version,
+    )})
     with ipfs_mounted(
         root, ipfs_client,
     ) as mountpoint:
         with open(os.path.join(mountpoint, 'file'), 'rb') as f:
             assert f.read() == content
-
-
-def test_cid_version_1_small_file(ipfs_mounted):
-    content = "this is next gen file"
-    root = subprocess.run(
-        f'echo "{content}" | ipfs add --cid-version 1 --wrap-with-directory --quieter --stdin-name file',
-        shell=True,
-        check=True,
-        stdout=subprocess.PIPE,
-    ).stdout.decode('ascii').strip()
-    with ipfs_mounted(
-        root, ipfs_client,
-    ) as mountpoint:
-        with open(os.path.join(mountpoint, 'file'), 'rb') as f:
-            assert f.read().decode('ascii') == content + '\n'
 
 
 def test_invalid_root_hash(fuse_kwargs):
