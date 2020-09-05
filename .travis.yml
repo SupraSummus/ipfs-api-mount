@@ -1,6 +1,7 @@
 branches:
   only:
     - master
+dist: focal
 language: python
 python:
   - "3.6"
