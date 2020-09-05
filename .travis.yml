@@ -3,9 +3,9 @@ branches:
     - master
 language: python
 python:
-  - "3.6.9"
-  - "3.7.9"
-  - "3.8.5"
+  - "3.6"
+  - "3.7"
+  - "3.8"
 env:
   global:
     - PROTOC_VERSION=3.12.0
@@ -30,6 +30,6 @@ script:
   - ipfs daemon --offline --init &
   - IPFS_PID=$!
   - sleep 1
-  - tox -e $(echo py${TRAVIS_PYTHON_VERSION} | cut -f1,2 -d. | tr -d . | sed -e 's/pypypy/pypy/')
+  - tox -e $(echo py${TRAVIS_PYTHON_VERSION} | tr -d . | sed -e 's/pypypy/pypy/')
   - kill $IPFS_PID
   - codecov
