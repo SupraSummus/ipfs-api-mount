@@ -10,9 +10,9 @@ env:
   global:
     - PROTOC_VERSION=3.12.0
   jobs:
-    - GO_IPFS_VERSION=0.4.22
     - GO_IPFS_VERSION=0.5.1
     - GO_IPFS_VERSION=0.6.0
+    - GO_IPFS_VERSION=0.7.0
 before_install:
   - sudo apt-get install -qq pkg-config fuse
   - sudo modprobe fuse
