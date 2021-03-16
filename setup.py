@@ -40,7 +40,7 @@ setup(
         'fusepy==3.0.*',
         'ipfshttpclient>=0.6.1,<0.8',
         'lru-dict==1.*',
-        'protobuf>=3.12,<4',
+        'protobuf>=3.15,<4',
         'py-multibase==1.*',
     ],
     packages=find_packages(),

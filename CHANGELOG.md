@@ -7,6 +7,10 @@ Well, at least this is the intention.
 
 ## [Unreleased]
 
+## [0.4.1] - 2021-03-16
+### Fixed
+ * Fixed protobuf package version mismatch
+
 ## [0.4.0] - 2021-03-16
 ### Added
  * `--timeout` parameter
