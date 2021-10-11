@@ -10,6 +10,9 @@ Well, at least this is the intention.
  * Official support for python 3.9
  * Support for go-ipfs 0.8, 0.9, 0.10
 
+### Removed
+ * Support for go-ipfs 0.5, 0.6
+
 ## [0.4.1] - 2021-03-16
 ### Fixed
  * Fixed protobuf package version mismatch
