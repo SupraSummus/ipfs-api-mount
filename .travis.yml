@@ -6,6 +6,7 @@ python:
   - "3.6.9"
   - "3.7.9"
   - "3.8.5"
+  - "3.9.1"
 env:
   global:
     - PROTOC_VERSION=3.12.0

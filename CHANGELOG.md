@@ -6,6 +6,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 Well, at least this is the intention.
 
 ## [Unreleased]
+### Added
+ * Official support for python 3.9
 
 ## [0.4.1] - 2021-03-16
 ### Fixed
