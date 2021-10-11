@@ -20,7 +20,7 @@ before_install:
   - sudo chown root:$USER /etc/fuse.conf
 install:
   - pip install tox codecov
-  - curl https://dist.ipfs.io/go-ipfs/v${GO_IPFS_VERSION}/go-ipfs_v${GO_IPFS_VERSION}_linux-amd64.tar.gz | tar xvz
+  - curl https://github.com/ipfs/go-ipfs/releases/download/v${GO_IPFS_VERSION}/go-ipfs_v${GO_IPFS_VERSION}_linux-amd64.tar.gz | tar xvz
   - export PATH=$PATH:$(pwd)/go-ipfs
   - curl -L https://github.com/protocolbuffers/protobuf/releases/download/v${PROTOC_VERSION}/protoc-${PROTOC_VERSION}-linux-x86_64.zip > protoc.zip
   - sudo unzip -d /usr/local protoc.zip
