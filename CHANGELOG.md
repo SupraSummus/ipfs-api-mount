@@ -8,6 +8,7 @@ Well, at least this is the intention.
 ## [Unreleased]
 ### Added
  * Official support for python 3.9
+ * Support for go-ipfs 0.8, 0.9, 0.10
 
 ## [0.4.1] - 2021-03-16
 ### Fixed

@@ -144,7 +144,7 @@ def test_timeout_while_read(ipfs_mounted):
 
             # timeout error is signaled
             with mock.patch.object(
-                ipfshttpclient.http.ClientSync,
+                ipfshttpclient.http._backend.ClientSync,
                 '_request',
                 side_effect=ipfshttpclient.exceptions.TimeoutError(None),
             ) as _request_mocked:
