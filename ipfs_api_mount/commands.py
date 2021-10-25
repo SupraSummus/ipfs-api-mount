@@ -3,11 +3,11 @@ import logging
 import socket
 import sys
 
-import fuse
 import ipfshttpclient
+import pyfuse3
 
 from . import __version__
-from .fuse_operations import IPFSMount, fuse_kwargs, WholeIPFSOperations
+from .fuse_operations import IPFSOperations, fuse_kwargs, WholeIPFSOperations
 
 
 class Command:
@@ -63,7 +63,7 @@ class Command:
         with ipfshttpclient.connect(
             '/ip4/{}/tcp/{}/http'.format(ip, args.api_port)
         ) as client:
-            fuse.FUSE(
+            pyfuse3.init(
                 self.get_fuse_operations_instance(args, client),
                 args.mountpoint,
                 foreground=not args.background,
@@ -94,7 +94,7 @@ class IPFSApiMountCommand(Command):
         super().add_positional_arguments()
 
     def get_fuse_operations_instance(self, args, ipfs_client):
-        return IPFSMount(
+        return IPFSOperations(
             args.root,
             ipfs_client,
             **self.get_fuse_operations_kwargs(args),
