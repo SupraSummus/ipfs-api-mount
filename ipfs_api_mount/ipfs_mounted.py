@@ -4,9 +4,10 @@ import subprocess
 import tempfile
 import time
 
-import fuse
+import pyfuse3
+import trio
 
-from .fuse_operations import IPFSMount, fuse_kwargs
+from .fuse_operations import IPFSOperations
 
 
 class IPFSMountTimeout(Exception):
@@ -18,7 +19,7 @@ class IPFSFUSEThread(Thread):
         self,
         mountpoint,
         *fuse_operations_args,
-        fuse_operations_class=IPFSMount,
+        fuse_operations_class=IPFSOperations,
         multithreaded=True,
         max_read=0,  # 0 means default (no read size limit)
         attr_timeout=1.0,  # 1s - default value according to manpage
@@ -46,20 +47,19 @@ class IPFSFUSEThread(Thread):
             raise self.exc
 
     def mount(self):
-        ipfs_mount = self.fuse_operations_class(
+        fuse_operations = self.fuse_operations_class(
             *self.fuse_operations_args,
             **self.fuse_operations_kwargs,
         )
-        fuse.FUSE(
-            ipfs_mount,
-            self.mountpoint,
-            foreground=True,
-            nothreads=not self.multithreaded,
-            allow_other=False,
-            max_read=self.max_read,
-            attr_timeout=self.attr_timeout,
-            **fuse_kwargs,
-        )
+        fuse_options = set(pyfuse3.default_options)
+        pyfuse3.init(fuse_operations, self.mountpoint, fuse_options)
+        try:
+            trio.run(pyfuse3.main)
+        except Exception:
+            pyfuse3.close(unmount=False)
+            raise
+        else:
+            pyfuse3.close()
 
     def unmount(self):
         # TODO - fuse_exit() has global effects, so locking/more precise termination is needed

@@ -19,3 +19,13 @@ def test_cant_list_mountpoint_root(fuse_kwargs):
         # if we try we get PermissionError
         with pytest.raises(PermissionError):
             os.listdir(mountpoint)
+
+
+def test_cant_stat_malformed_cid(fuse_kwargs):
+    with ipfs_mounted(
+        ipfs_client,
+        fuse_operations_class=WholeIPFSOperations,
+        **fuse_kwargs,
+    ) as mountpoint:
+        with pytest.raises(FileNotFoundError):
+            os.stat(os.path.join(mountpoint, 'QmSomeHash'))

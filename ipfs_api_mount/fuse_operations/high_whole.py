@@ -1,48 +1,41 @@
 import errno
 import stat
 
-import fuse
+import pyfuse3
 
-from .high import IPFSMount
+from .high import BaseIPFSOperations
 
 
-class WholeIPFSOperations(IPFSMount):
-    def __init__(self, *args, **kwargs):
-        super().__init__(
-            None,  # root - we are not using it
-            *args,
-            **kwargs,
-        )
-
-    # Perfect solution would be to extract common base class,
-    # and implement this method only in IPFSMount. But for now we have this dirty patching.
-    def _validate_root_path(self):
-        pass
-
-    def get_ipfs_path(self, path):
-        return path[1:]  # strip leading slash
-
-    def readdir(self, path, fh):
-        if path == '/':
-            raise fuse.FuseOSError(errno.EPERM)
+class WholeIPFSOperations(BaseIPFSOperations):
+    async def lookup(self, inode, name, ctx):
+        if inode == pyfuse3.ROOT_INODE:
+            cid = self.ipfs.resolve(name.decode())
+            return await self.lookup_cid_or_none(cid, ctx)
         else:
-            return super().readdir(path, fh)
+            return await super().lookup(inode, name, ctx)
 
-    def getattr(self, path, fh=None):
-        if path == '/':
-            st_mode = (
+    async def readdir(self, fh, start_id, token):
+        inode = fh
+        if inode == pyfuse3.ROOT_INODE:
+            raise pyfuse3.FUSEError(errno.EPERM)
+        else:
+            return await super().readdir(fh, start_id, token)
+
+    async def getattr(self, inode, ctx):
+        if inode == pyfuse3.ROOT_INODE:
+            attrs = pyfuse3.EntryAttributes()
+            attrs.st_ino = inode
+            attrs.st_atime_ns = 0
+            attrs.st_ctime_ns = 0
+            attrs.st_mtime_ns = 0
+            attrs.st_gid = 0
+            attrs.st_uid = 0
+            attrs.st_mode = (
                 stat.S_IFDIR |
                 stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH
             )
-            return {
-                'st_atime': 0,
-                'st_ctime': 0,
-                'st_mtime': 0,
-                'st_gid': 0,
-                'st_uid': 0,
-                'st_mode': st_mode,
-                'st_nlink': 0,
-                'st_size': 0,
-            }
+            attrs.st_nlink = 0
+            attrs.st_size = 0
+            return attrs
         else:
-            return super().getattr(path, fh=fh)
+            return await super().getattr(inode, ctx)

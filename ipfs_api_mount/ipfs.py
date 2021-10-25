@@ -55,7 +55,7 @@ class CachedIPFS:
                 self.resolve_cache[path] = None
                 return None
 
-            cid = absolute_path[6:]
+            cid = absolute_path[6:]  # strip '/ipfs/'
             self.resolve_cache[path] = cid
             return cid
 
@@ -135,13 +135,10 @@ class CachedIPFS:
                 return value
 
             try:
-                ls_result = {
-                    entry['Name']: entry
-                    for entry in self.client.ls(
-                        path,
-                        **self.client_request_kwargs,
-                    )['Objects'][0]['Links']
-                }
+                ls_result = self.client.ls(
+                    path,
+                    **self.client_request_kwargs,
+                )['Objects'][0]['Links']
 
             except ipfshttpclient.exceptions.ErrorResponse:
                 ls_result = None
@@ -149,9 +146,11 @@ class CachedIPFS:
             self.ls_cache[path] = ls_result
             return ls_result
 
-    def path_size(self, path):
-        cid = self.resolve(path)
+    def cid_ls(self, cid):
+        # cid is a valid path
+        return self.ls(cid)
 
+    def cid_size(self, cid):
         if cid is None:
             return None
 
@@ -196,9 +195,7 @@ class CachedIPFS:
         else:
             raise InvalidIPFSPathException()
 
-    def path_is_dir(self, path):
-        cid = self.resolve(path)
-
+    def cid_is_dir(self, cid):
         if cid is None:
             return False
 
@@ -207,9 +204,7 @@ class CachedIPFS:
             unixfs_pb2.Data.HAMTShard,
         )
 
-    def path_is_file(self, path):
-        cid = self.resolve(path)
-
+    def cid_is_file(self, cid):
         if cid is None:
             return False
 
