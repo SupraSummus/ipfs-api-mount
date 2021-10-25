@@ -1,6 +1,7 @@
 branches:
   only:
     - master
+dist: focal
 language: python
 python:
   - "3.6.9"
@@ -16,7 +17,7 @@ env:
     - GO_IPFS_VERSION=0.9.1
     - GO_IPFS_VERSION=0.10.0
 before_install:
-  - sudo apt-get install -qq pkg-config fuse
+  - sudo apt-get install -qq pkg-config fuse3 libfuse3-dev
   - sudo modprobe fuse
   - sudo chmod 666 /dev/fuse
   - sudo chown root:$USER /etc/fuse.conf
