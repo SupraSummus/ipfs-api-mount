@@ -1,4 +1,3 @@
-import errno
 import stat
 
 import pyfuse3
@@ -13,13 +12,6 @@ class WholeIPFSOperations(BaseIPFSOperations):
             return await self.lookup_cid_or_none(cid, ctx)
         else:
             return await super().lookup(inode, name, ctx)
-
-    async def readdir(self, fh, start_id, token):
-        inode = fh
-        if inode == pyfuse3.ROOT_INODE:
-            raise pyfuse3.FUSEError(errno.EPERM)
-        else:
-            return await super().readdir(fh, start_id, token)
 
     async def getattr(self, inode, ctx):
         if inode == pyfuse3.ROOT_INODE:

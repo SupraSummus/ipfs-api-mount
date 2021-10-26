@@ -56,18 +56,6 @@ class BaseIPFSOperations(pyfuse3.Operations):
         if (flags & write_flags) != 0:
             raise pyfuse3.FUSEError(errno.EROFS)
 
-        cid = self.inode_cids[inode]
-        try:
-            if self.ipfs.cid_is_dir(cid):
-                raise pyfuse3.FUSEError(errno.EISDIR)
-            if not self.ipfs.cid_is_file(cid):
-                logger.warning('strange entity type at %s', cid)
-                pyfuse3.FUSEError(errno.ENOENT)
-
-        except ipfshttpclient.exceptions.TimeoutError as e:
-            logger.warning('timeout while open(%s)', cid)
-            raise pyfuse3.FUSEError(errno.EAGAIN) from e
-
         return pyfuse3.FileInfo(fh=inode, keep_cache=True)
 
     async def read(self, fh, offset, size):
@@ -75,11 +63,6 @@ class BaseIPFSOperations(pyfuse3.Operations):
         cid = self.inode_cids[inode]
 
         try:
-            if self.ipfs.cid_is_dir(cid):
-                raise pyfuse3.FUSEError(errno.EISDIR)
-            elif not self.ipfs.cid_is_file(cid):
-                raise pyfuse3.FUSEError(errno.ENOENT)
-
             data = bytearray(size)
             n = self.ipfs.read_into(
                 cid,
@@ -92,7 +75,6 @@ class BaseIPFSOperations(pyfuse3.Operations):
             raise pyfuse3.FUSEError(errno.EAGAIN) from e
 
     async def opendir(self, inode, ctx):
-        # TODO check if this is a dir
         return inode
 
     async def readdir(self, fh, start_id, token):
@@ -103,9 +85,6 @@ class BaseIPFSOperations(pyfuse3.Operations):
         except ipfshttpclient.exceptions.TimeoutError as e:
             logger.warning('timeout while readdir(%s)', cid)
             raise pyfuse3.FUSEError(errno.EAGAIN) from e
-
-        if ls_result is None:
-            raise pyfuse3.FUSEError(errno.ENOTDIR)
 
         ls_result = ls_result[start_id:]
 

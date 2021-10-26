@@ -23,6 +23,18 @@ def test_dir_read(ipfs_mounted, entries):
         assert sorted(os.listdir(mountpoint)) == sorted(entries)
 
 
+def test_dir_read_on_file(ipfs_mounted):
+    """ It's not possible to listdir a file. """
+    root = ipfs_dir({
+        'a_file': ipfs_file(b''),
+    })
+    with ipfs_mounted(
+        root, ipfs_client,
+    ) as mountpoint:
+        with pytest.raises(NotADirectoryError):
+            os.listdir(os.path.join(mountpoint, 'a_file'))
+
+
 def test_file_times(ipfs_mounted):
     """creation/modification/access times for a file are all 0"""
     root = ipfs_dir({
@@ -121,7 +133,7 @@ def test_complex_root_hash(ipfs_mounted):
         assert os.listdir(mountpoint) == ['empty_dir']
 
 
-def test_nonexistent_file(ipfs_mounted):
+def test_open_nonexistent_file(ipfs_mounted):
     """ there is no way we can open nonexistent file """
     root = ipfs_dir({})
     with ipfs_mounted(
@@ -129,6 +141,18 @@ def test_nonexistent_file(ipfs_mounted):
     ) as mountpoint:
         with pytest.raises(FileNotFoundError):
             open(os.path.join(mountpoint, 'a_file'), 'rb')
+
+
+def test_open_dir(ipfs_mounted):
+    """ It's not possible to open a directory as it was a file. """
+    root = ipfs_dir({
+        'a_dir': ipfs_dir({}),
+    })
+    with ipfs_mounted(
+        root, ipfs_client,
+    ) as mountpoint:
+        with pytest.raises(IsADirectoryError):
+            open(os.path.join(mountpoint, 'a_dir'), 'rb')
 
 
 def test_timeout_while_read(ipfs_mounted):
