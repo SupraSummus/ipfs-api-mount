@@ -2,6 +2,7 @@ import errno
 import logging
 import os
 import stat
+from dataclasses import dataclass
 
 import ipfshttpclient
 import pyfuse3
@@ -12,6 +13,13 @@ from ipfs_api_mount.ipfs import CachedIPFS, InvalidIPFSPathException
 logger = logging.getLogger(__name__)
 
 
+@dataclass
+class IPFSInode:
+    cid: str
+    ino: int
+    lookup_count: int = 0
+
+
 class BaseIPFSOperations(pyfuse3.Operations):
     def __init__(
         self,
@@ -19,30 +27,44 @@ class BaseIPFSOperations(pyfuse3.Operations):
         **kwargs,
     ):
         self.ipfs = CachedIPFS(ipfs_client, **kwargs)
-        self.inode_cids = {}
-        self.cid_inodes = {}
+        self.inodes = {}
+        self.inodes_by_cid = {}
         self.inode_free = pyfuse3.ROOT_INODE + 1
 
     async def lookup(self, inode, name, ctx):
-        cid = self.inode_cids[inode]
-        child_cid = self.ipfs.resolve(cid + '/' + name.decode())
+        ipfs_inode = self.inodes[inode]
+        child_cid = self.ipfs.resolve(ipfs_inode.cid + '/' + name.decode())
         return await self.lookup_cid_or_none(child_cid, ctx)
 
     def lookup_cid(self, cid, ctx=None):
-        if cid in self.cid_inodes:
-            inode = self.cid_inodes[cid]
+        if cid in self.inodes_by_cid:
+            ipfs_inode = self.inodes_by_cid[cid]
         else:
-            inode = self.inode_free
+            ipfs_inode = IPFSInode(
+                ino=self.inode_free,
+                cid=cid,
+            )
             self.inode_free += 1
-            self.inode_cids[inode] = cid
-            self.cid_inodes[cid] = inode
-        return self.getattr(inode, ctx)
+            self.inodes[ipfs_inode.ino] = ipfs_inode
+            self.inodes_by_cid[ipfs_inode.cid] = ipfs_inode
+        ipfs_inode.lookup_count += 1
+        return self.getattr(ipfs_inode.ino, ctx)
 
     async def lookup_cid_or_none(self, cid, ctx=None):
         if cid:
             return await self.lookup_cid(cid, ctx)
         else:
             return pyfuse3.EntryAttributes(st_ino=0)
+
+    async def forget(self, inode_list):
+        for inode, n in inode_list:
+            ipfs_inode = self.inodes[inode]
+            ipfs_inode.lookup_count -= n
+            assert ipfs_inode.lookup_count >= 0
+            if ipfs_inode.lookup_count == 0:
+                del self.inodes[ipfs_inode.ino]
+                del self.inodes_by_cid[ipfs_inode.cid]
+                del ipfs_inode
 
     async def open(self, inode, flags, ctx):
         write_flags = (
@@ -60,7 +82,7 @@ class BaseIPFSOperations(pyfuse3.Operations):
 
     async def read(self, fh, offset, size):
         inode = fh
-        cid = self.inode_cids[inode]
+        cid = self.inodes[inode].cid
 
         try:
             data = bytearray(size)
@@ -79,7 +101,7 @@ class BaseIPFSOperations(pyfuse3.Operations):
 
     async def readdir(self, fh, start_id, token):
         inode = fh
-        cid = self.inode_cids[inode]
+        cid = self.inodes[inode].cid
         try:
             ls_result = self.ipfs.cid_ls(cid)
         except ipfshttpclient.exceptions.TimeoutError as e:
@@ -98,10 +120,11 @@ class BaseIPFSOperations(pyfuse3.Operations):
                 start_id + i + 1,
             )
             if not r:
+                await self.forget([(entry_attrs.st_ino, 1)])
                 return
 
     async def getattr(self, inode, ctx):
-        cid = self.inode_cids[inode]
+        cid = self.inodes[inode].cid
         try:
             if self.ipfs.cid_is_dir(cid):
                 st_mode = (
@@ -146,4 +169,8 @@ class IPFSOperations(BaseIPFSOperations):
         root_cid = self.ipfs.resolve(root)
         if not self.ipfs.cid_is_dir(root_cid):
             raise InvalidIPFSPathException("root path is not a directory")
-        self.inode_cids[pyfuse3.ROOT_INODE] = root_cid
+        self.inodes[pyfuse3.ROOT_INODE] = IPFSInode(
+            cid=root_cid,
+            ino=pyfuse3.ROOT_INODE,
+            lookup_count=1,
+        )
