@@ -6,7 +6,7 @@ ipfs-api-mount
 
 Mount IPFS directory as local FS.
 
-go-ipfs daemon has this function but as of version 0.4.22 it's slow.
+go-ipfs daemon has this function but as of version 0.9.1 it's slow.
 `ipfs-api-mount` aims to be more efficient. For sequential access to
 random data it's ~3 times slower than `ipfs cat` but also ~20 times
 faster than `cat`ing files mounted by go-ipfs.
@@ -25,7 +25,7 @@ Install package ...
 ... and then
 
     mkdir a_dir
-    ipfs-api-mount --background QmXKqqUymTQpEM89M15G23wot8g7n1qVYQQ6vVCpEofYSe a_dir
+    ipfs-api-mount QmXKqqUymTQpEM89M15G23wot8g7n1qVYQQ6vVCpEofYSe a_dir &
     ls a_dir
     # aaa  bbb
 
@@ -38,7 +38,7 @@ To unmount
 Apart from mounting one specified CID you can also mount whole IPFS namespace. This is similar to `ipfs mount` provided in go-ipfs.
 
     mkdir a_dir
-    ipfs-api-mount-whole --background a_dir
+    ipfs-api-mount-whole a_dir &
     ls a_dir/QmXoypizjW3WknFiJnKLwHCnL72vedxjQkDDP1mXWo6uco
     # -  I  index.html  M  wiki
 
@@ -49,8 +49,9 @@ Mountpoints can be created inside python programs
     import os
     import ipfshttpclient
     from ipfs_api_mount.ipfs_mounted import ipfs_mounted
+    from ipfs_api_mount.fuse_operations import IPFSOperations
 
-    with ipfs_mounted('QmSomeHash', ipfshttpclient.connect()) as mountpoint:
+    with ipfs_mounted(IPFSOperations('QmSomeHash', ipfshttpclient.connect())) as mountpoint:
         print(os.listdir(mountpoint))
 
 Benchmark
@@ -60,31 +61,33 @@ Try it yourself and run `./benchamrk [number of Mbytes]`.
 
 Example output:
 
-    [jan@bubel ipfs-api-mount]$ ./benchmark.sh 10
-    ipfs version 0.4.22
-    creating 10MB of random data and uploading to ipfs ...
-    10MB of data at:
-        QmP3YepbcGX8PXST3NYjXDjwAscrD8poT4YA2wJudpea8W
-        QmTfmg74kWcmqum1LaJHhK4j7M8GUv1k2XfcQpUPViCe35/data
+    ipfs version 0.9.1
+    creating 100MB of random data and uploading to ipfs ...
+    100MB of data at:
+            QmTnYkR6FBajXhY6bmRnTtuQ2MA8f66BoW2pFu2Z6rParg
+            QmaiV6qpn4k4WEy6Ge7p2s4rAMYTY6hd77dSioq4JUUaLU/data
 
-    ### ipfs cat QmP3YepbcGX8PXST3NYjXDjwAscrD8poT4YA2wJudpea8W
+    ### ipfs cat QmTnYkR6FBajXhY6bmRnTtuQ2MA8f66BoW2pFu2Z6rParg
+    4f63d1c2056a8c33b43dc0c2a107a1ec3d679ad7fc1b08ce96526a10c9c458d7  -
 
-    real	0m0.091s
-    user	0m0.024s
-    sys	0m0.045s
+    real    0m0.686s
+    user    0m0.867s
+    sys     0m0.198s
 
-    ### ipfs-api-mount QmTfmg74kWcmqum1LaJHhK4j7M8GUv1k2XfcQpUPViCe35 /tmp/tmp.Adw8sn8My2
-    ### cat /tmp/tmp.Adw8sn8My2/data
+    ### ipfs-api-mount QmaiV6qpn4k4WEy6Ge7p2s4rAMYTY6hd77dSioq4JUUaLU /tmp/tmp.7CyBemuY5Q
+    ### cat /tmp/tmp.7CyBemuY5Q/data
+    4f63d1c2056a8c33b43dc0c2a107a1ec3d679ad7fc1b08ce96526a10c9c458d7  -
 
-    real	0m0.189s
-    user	0m0.006s
-    sys	0m0.000s
+    real    0m2.387s
+    user    0m0.495s
+    sys     0m0.145s
 
-    ### cat /ipfs/QmP3YepbcGX8PXST3NYjXDjwAscrD8poT4YA2wJudpea8W
+    ### cat /ipfs/QmTnYkR6FBajXhY6bmRnTtuQ2MA8f66BoW2pFu2Z6rParg
+    4f63d1c2056a8c33b43dc0c2a107a1ec3d679ad7fc1b08ce96526a10c9c458d7  -
 
-    real	0m5.949s
-    user	0m0.000s
-    sys	0m0.084s
+    real    0m59.976s
+    user    0m2.975s
+    sys     0m1.166s
 
 More in depth description
 -------------------------
