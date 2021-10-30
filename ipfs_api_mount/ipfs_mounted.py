@@ -7,7 +7,7 @@ import time
 import pyfuse3
 import trio
 
-from .fuse_operations import IPFSOperations
+from .fuse_operations import default_fuse_options
 
 
 class IPFSMountTimeout(Exception):
@@ -18,21 +18,15 @@ class IPFSFUSEThread(Thread):
     def __init__(
         self,
         mountpoint,
-        *fuse_operations_args,
-        fuse_operations_class=IPFSOperations,
-        multithreaded=True,
-        max_read=0,  # 0 means default (no read size limit)
-        attr_timeout=1.0,  # 1s - default value according to manpage
-        **fuse_operations_kwargs,
+        fuse_operations,
+        max_read=None,
+        allow_other=False,
     ):
         super().__init__()
         self.mountpoint = mountpoint
-        self.fuse_operations_class = fuse_operations_class
-        self.multithreaded = multithreaded
+        self.fuse_operations = fuse_operations
         self.max_read = max_read
-        self.attr_timeout = attr_timeout
-        self.fuse_operations_args = fuse_operations_args
-        self.fuse_operations_kwargs = fuse_operations_kwargs
+        self.allow_other = allow_other
 
     def run(self):
         self.exc = None
@@ -47,12 +41,7 @@ class IPFSFUSEThread(Thread):
             raise self.exc
 
     def mount(self):
-        fuse_operations = self.fuse_operations_class(
-            *self.fuse_operations_args,
-            **self.fuse_operations_kwargs,
-        )
-        fuse_options = set(pyfuse3.default_options)
-        pyfuse3.init(fuse_operations, self.mountpoint, fuse_options)
+        pyfuse3.init(self.fuse_operations, self.mountpoint, self.get_fuse_options())
         try:
             trio.run(pyfuse3.main)
         except Exception:
@@ -61,11 +50,19 @@ class IPFSFUSEThread(Thread):
         else:
             pyfuse3.close()
 
+    def get_fuse_options(self):
+        fuse_options = set(default_fuse_options)
+        if self.max_read is not None:
+            fuse_options.add(f'max_read={self.max_read}')
+        if self.allow_other:
+            fuse_options.add('allow_other')
+        return fuse_options
+
     def unmount(self):
         # TODO - fuse_exit() has global effects, so locking/more precise termination is needed
         # anyway, fuse.fuse_exit() <- causes segafult, so not using it
         subprocess.run(
-            ['fusermount', '-u', self.mountpoint, '-q'],
+            ['fusermount3', '-u', self.mountpoint, '-q'],
             check=self.is_alive(),  # this command has to succeed only if fuse thread is feeling good
         )
 

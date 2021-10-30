@@ -1,9 +1,12 @@
 import os
 import subprocess
 
+import pytest
+
 from tools import ipfs_dir, ipfs_file, ipfs_client, request_count_measurement
 
 
+@pytest.mark.skip(reason='max_read seems broken - https://github.com/libfuse/pyfuse3/issues/49')
 def test_file_read(ipfs_mounted):
     """ Reading a file causes at most as many requests as there are blocks in the file. """
     chunk_count = 100
@@ -14,7 +17,9 @@ def test_file_read(ipfs_mounted):
     with ipfs_mounted(
         root, ipfs_client,
         link_cache_size=4,
-        max_read=chunk_size,  # prevent FUSE from doing large reads to exagerate cache effects
+        fuse_kwargs=dict(
+            max_read=chunk_size,  # prevent FUSE from doing large reads to exagerate cache effects
+        ),
     ) as mountpoint:
         with request_count_measurement(ipfs_client) as mocked_request:
 
@@ -43,7 +48,6 @@ def test_file_attribute_cache(ipfs_mounted):
     with ipfs_mounted(
         root, ipfs_client,
         attr_cache_size=int(n * 0.9),
-        attr_timeout=0,  # disable FUSE-level caching
     ) as mountpoint:
         subprocess.run(['ls', '-l', mountpoint], **ls_kwargs)
         with request_count_measurement(ipfs_client) as mocked:
@@ -54,7 +58,6 @@ def test_file_attribute_cache(ipfs_mounted):
     with ipfs_mounted(
         root, ipfs_client,
         attr_cache_size=int(n * 1.1),
-        attr_timeout=0,  # disable FUSE-level caching
     ) as mountpoint:
         subprocess.run(['ls', '-l', mountpoint], **ls_kwargs)
         with request_count_measurement(ipfs_client) as mocked:

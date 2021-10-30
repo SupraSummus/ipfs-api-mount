@@ -4,10 +4,10 @@ import socket
 import sys
 
 import ipfshttpclient
-import pyfuse3
 
 from . import __version__
-from .fuse_operations import IPFSOperations, fuse_kwargs, WholeIPFSOperations
+from .fuse_operations import IPFSOperations, WholeIPFSOperations
+from .ipfs_mounted import IPFSFUSEThread
 
 
 class Command:
@@ -25,8 +25,6 @@ class Command:
         parser.add_argument('--block-cache-size', type=int, default=16, help='Max number of data blocks kept in cache.')
         parser.add_argument('--link-cache-size', type=int, default=256, help='Max number of object link sections kept in cache.')
         parser.add_argument('--attr-cache-size', type=int, default=1024 * 128, help='Max number of file attributes kept in cache.')
-        parser.add_argument('-b', '--background', action='store_true', help='Run in background.')
-        parser.add_argument('--no-threads', action='store_true', help='Use single thread to handle FS requests.')
         parser.add_argument('--allow-other', action='store_true', help='Set fuse mount option \'allow_other\'')
         parser.add_argument('--api-host', type=str, default='127.0.0.1', help='IPFS API host')
         parser.add_argument('--api-port', type=int, default=5001, help='IPFS API port')
@@ -63,14 +61,13 @@ class Command:
         with ipfshttpclient.connect(
             '/ip4/{}/tcp/{}/http'.format(ip, args.api_port)
         ) as client:
-            pyfuse3.init(
-                self.get_fuse_operations_instance(args, client),
+            fuse_thread = IPFSFUSEThread(
                 args.mountpoint,
-                foreground=not args.background,
-                nothreads=args.no_threads,
+                self.get_fuse_operations_instance(args, client),
                 allow_other=args.allow_other,
-                **fuse_kwargs,
             )
+            fuse_thread.start()
+            fuse_thread.join()
 
     def get_fuse_operations_kwargs(self, args):
         return dict(

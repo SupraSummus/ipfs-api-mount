@@ -5,8 +5,9 @@ import os
 import pytest
 import ipfshttpclient
 
-import ipfs_api_mount
+from ipfs_api_mount.fuse_operations import IPFSOperations
 from ipfs_api_mount.ipfs import InvalidIPFSPathException
+import ipfs_api_mount
 
 from tools import ipfs_client, ipfs_dir, ipfs_file
 
@@ -100,28 +101,26 @@ def test_file_read(ipfs_mounted, content, raw_leaves, cid_version):
             assert f.read() == content
 
 
-def test_invalid_root_hash(fuse_kwargs):
+def test_root_hash_invalid():
     """ we should refuse to mount invalid hash """
     with pytest.raises(InvalidIPFSPathException):
         with ipfs_api_mount.ipfs_mounted(
-            'straight/to/nonsense', ipfs_client,
-            **fuse_kwargs,
+            IPFSOperations('straight/to/nonsense', ipfs_client),
         ):
             pass
 
 
-def test_file_root_hash(fuse_kwargs):
+def test_root_hash_file():
     """ we should refuse to mount something that is a file (dir is needed) """
     root = ipfs_file(b'definetly not a dir')
     with pytest.raises(InvalidIPFSPathException):
         with ipfs_api_mount.ipfs_mounted(
-            root, ipfs_client,
-            **fuse_kwargs,
+            IPFSOperations(root, ipfs_client),
         ):
             pass
 
 
-def test_complex_root_hash(ipfs_mounted):
+def test_root_hash_complex(ipfs_mounted):
     root = ipfs_dir({
         'nested_dir': ipfs_dir({
             'empty_dir': ipfs_dir({}),
@@ -162,8 +161,9 @@ def test_open_rw(ipfs_mounted):
     with ipfs_mounted(
         root, ipfs_client,
     ) as mountpoint:
-        with pytest.raises(PermissionError):
+        with pytest.raises(OSError) as excinfo:
             open(os.path.join(mountpoint, 'a_file'), 'r+b')
+        assert excinfo.value.errno == errno.EROFS
 
 
 def test_timeout_while_read(ipfs_mounted):
