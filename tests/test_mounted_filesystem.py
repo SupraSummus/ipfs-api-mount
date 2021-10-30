@@ -155,6 +155,17 @@ def test_open_dir(ipfs_mounted):
             open(os.path.join(mountpoint, 'a_dir'), 'rb')
 
 
+def test_open_rw(ipfs_mounted):
+    root = ipfs_dir({
+        'a_file': ipfs_file(b'blabla\n'),
+    })
+    with ipfs_mounted(
+        root, ipfs_client,
+    ) as mountpoint:
+        with pytest.raises(PermissionError):
+            open(os.path.join(mountpoint, 'a_file'), 'r+b')
+
+
 def test_timeout_while_read(ipfs_mounted):
     root = ipfs_dir({
         'a_file': ipfs_file(b'blabla\n')
