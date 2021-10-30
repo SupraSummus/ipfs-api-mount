@@ -1,6 +1,5 @@
 import errno
 import logging
-import os
 import stat
 from dataclasses import dataclass
 
@@ -67,17 +66,6 @@ class BaseIPFSOperations(pyfuse3.Operations):
                 del ipfs_inode
 
     async def open(self, inode, flags, ctx):
-        write_flags = (
-            os.O_WRONLY |
-            os.O_RDWR |
-            os.O_APPEND |
-            os.O_CREAT |
-            os.O_EXCL |
-            os.O_TRUNC
-        )
-        if (flags & write_flags) != 0:
-            raise pyfuse3.FUSEError(errno.EROFS)
-
         return pyfuse3.FileInfo(fh=inode, keep_cache=True)
 
     async def read(self, fh, offset, size):
