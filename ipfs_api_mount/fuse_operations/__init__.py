@@ -1,12 +1,11 @@
+import pyfuse3
+
 from .high import IPFSOperations
 from .high_whole import WholeIPFSOperations
 
 
-__all__ = ['IPFSOperations', 'fuse_kwargs', 'WholeIPFSOperations']
+__all__ = ['IPFSOperations', 'default_fuse_options', 'WholeIPFSOperations']
 
-
-fuse_kwargs = dict(
-    auto_unmount=True,
-    ro=True,
-    kernel_cache=True,
-)
+default_fuse_options = set(pyfuse3.default_options)
+default_fuse_options.add('auto_unmount')
+default_fuse_options.add('ro')
