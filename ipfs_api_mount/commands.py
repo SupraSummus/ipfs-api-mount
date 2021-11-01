@@ -1,5 +1,6 @@
 import argparse
 import logging
+import signal
 import socket
 import sys
 
@@ -61,13 +62,15 @@ class Command:
         with ipfshttpclient.connect(
             '/ip4/{}/tcp/{}/http'.format(ip, args.api_port)
         ) as client:
+            # we are not using it as a thread - just trigering mounting code localy
+            operations = self.get_fuse_operations_instance(args, client)
             fuse_thread = IPFSFUSEThread(
                 args.mountpoint,
-                self.get_fuse_operations_instance(args, client),
+                operations,
                 allow_other=args.allow_other,
             )
-            fuse_thread.start()
-            fuse_thread.join()
+            signal.signal(signal.SIGINT, lambda num, frame: fuse_thread.unmount(check=True))
+            fuse_thread.mount()
 
     def get_fuse_operations_kwargs(self, args):
         return dict(

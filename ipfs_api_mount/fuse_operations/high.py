@@ -162,3 +162,4 @@ class IPFSOperations(BaseIPFSOperations):
             ino=pyfuse3.ROOT_INODE,
             lookup_count=1,
         )
+        self.fsname = f'/ipfs/{root_cid}'

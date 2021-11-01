@@ -6,6 +6,10 @@ from .high import BaseIPFSOperations
 
 
 class WholeIPFSOperations(BaseIPFSOperations):
+    @property
+    def fsname(self):
+        return '/ipfs'
+
     async def lookup(self, inode, name, ctx):
         if inode == pyfuse3.ROOT_INODE:
             cid = self.ipfs.resolve(name.decode())
