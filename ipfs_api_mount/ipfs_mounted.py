@@ -52,18 +52,20 @@ class IPFSFUSEThread(Thread):
 
     def get_fuse_options(self):
         fuse_options = set(default_fuse_options)
+        fuse_options.add(f'fsname={self.fuse_operations.fsname}')
         if self.max_read is not None:
             fuse_options.add(f'max_read={self.max_read}')
         if self.allow_other:
             fuse_options.add('allow_other')
         return fuse_options
 
-    def unmount(self):
-        # TODO - fuse_exit() has global effects, so locking/more precise termination is needed
-        # anyway, fuse.fuse_exit() <- causes segafult, so not using it
+    def unmount(self, check=None):
+        # TODO - unmount using pyfuse3.terimnate()
+        if check is None:
+            self.is_alive()  # unmounting has to succeed only if fuse thread is feeling good
         subprocess.run(
             ['fusermount3', '-u', self.mountpoint, '-q'],
-            check=self.is_alive(),  # this command has to succeed only if fuse thread is feeling good
+            check=check,
         )
 
     def __enter__(self):
