@@ -10,8 +10,13 @@ Well, at least this is the intention.
  * Official support for python 3.9
  * Support for go-ipfs 0.8, 0.9, 0.10
 
+### Changed
+ * Switched from fusepy (fuse2) to pyfuse3 (fuse3, low-level).
+
 ### Removed
- * Support for go-ipfs 0.5, 0.6
+ * Removed `--background` and `--nothreads` options. Now we are always foreground and multithreaded.
+ * Dropped support for python 3.6
+ * Dropped support for go-ipfs 0.5, 0.6
 
 ## [0.4.1] - 2021-03-16
 ### Fixed
