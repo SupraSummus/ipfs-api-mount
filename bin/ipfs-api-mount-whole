@@ -2,6 +2,5 @@
 
 from ipfs_api_mount.commands import IPFSApiMountWholeCommand
 
-
 if __name__ == '__main__':
     IPFSApiMountWholeCommand().run()

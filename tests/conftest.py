@@ -1,10 +1,10 @@
-from contextlib import contextmanager
 import os
+from contextlib import contextmanager
 
 import pytest
 
-from ipfs_api_mount.fuse_operations import WholeIPFSOperations, IPFSOperations
 import ipfs_api_mount
+from ipfs_api_mount.fuse_operations import IPFSOperations, WholeIPFSOperations
 
 
 @pytest.fixture(

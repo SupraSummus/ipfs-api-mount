@@ -1,8 +1,8 @@
-from contextlib import contextmanager
-from threading import Thread
 import subprocess
 import tempfile
 import time
+from contextlib import contextmanager
+from threading import Thread
 
 import pyfuse3
 import trio

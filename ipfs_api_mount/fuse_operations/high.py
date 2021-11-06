@@ -8,7 +8,6 @@ import pyfuse3
 
 from ipfs_api_mount.ipfs import CachedIPFS, InvalidIPFSPathException
 
-
 logger = logging.getLogger(__name__)
 
 

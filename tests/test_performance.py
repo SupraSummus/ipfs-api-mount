@@ -2,8 +2,7 @@ import os
 import subprocess
 
 import pytest
-
-from tools import ipfs_dir, ipfs_file, ipfs_client, request_count_measurement
+from tools import ipfs_client, ipfs_dir, ipfs_file, request_count_measurement
 
 
 @pytest.mark.skip(reason='max_read seems broken - https://github.com/libfuse/pyfuse3/issues/49')

@@ -1,15 +1,14 @@
-from unittest import mock
 import errno
 import os
+from unittest import mock
 
-import pytest
 import ipfshttpclient
+import pytest
+from tools import ipfs_client, ipfs_dir, ipfs_file
 
+import ipfs_api_mount
 from ipfs_api_mount.fuse_operations import IPFSOperations
 from ipfs_api_mount.ipfs import InvalidIPFSPathException
-import ipfs_api_mount
-
-from tools import ipfs_client, ipfs_dir, ipfs_file
 
 
 @pytest.mark.parametrize('entries', [[], ['aaa', 'bbb']])

@@ -1,8 +1,7 @@
-from unittest import mock
 import tempfile
+from unittest import mock
 
 import ipfshttpclient
-
 
 ipfs_client = ipfshttpclient.connect('/ip4/127.0.0.1/tcp/5001/http')
 

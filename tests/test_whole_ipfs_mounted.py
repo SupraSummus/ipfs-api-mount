@@ -1,10 +1,10 @@
 import os
+
 import pytest
-
-from ipfs_api_mount.fuse_operations import WholeIPFSOperations
-from ipfs_api_mount import ipfs_mounted
-
 from tools import ipfs_client
+
+from ipfs_api_mount import ipfs_mounted
+from ipfs_api_mount.fuse_operations import WholeIPFSOperations
 
 
 def test_cant_list_mountpoint_root():

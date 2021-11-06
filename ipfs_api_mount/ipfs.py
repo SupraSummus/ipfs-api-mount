@@ -2,12 +2,11 @@ import logging
 import threading
 from contextlib import contextmanager
 
-from lru import LRU
 import ipfshttpclient
 import multibase
+from lru import LRU
 
 from . import unixfs_pb2
-
 
 logger = logging.getLogger(__name__)
 
