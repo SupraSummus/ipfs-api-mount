@@ -1,19 +1,20 @@
 #!/usr/bin/env python
-from setuptools import setup
-from distutils.command.build import build
-from setuptools.command.develop import develop
 from subprocess import check_call
+
+from setuptools import find_packages, setup
+from setuptools.command.build_py import build_py
+from setuptools.command.develop import develop
 
 
 def compile_protobuf():
     check_call(['protoc', '--python_out=.', 'ipfs_api_mount/unixfs.proto'])
 
 
-class custom_build(build):
+class custom_build_py(build_py):
     def run(self):
         if not self.dry_run:
             compile_protobuf()
-        build.run(self)
+        build_py.run(self)
 
 
 class custom_develop(develop):
@@ -37,19 +38,23 @@ setup(
     ],
     keywords='ipfs fuse mount fs',
     install_requires=[
-        'fusepy==3.0.*',
-        'ipfshttpclient==0.6.*',
+        'ipfshttpclient==0.8.0a2',
         'lru-dict==1.*',
-        'protobuf>=3.12,<4',
+        'protobuf>=3.15,<4',
         'py-multibase==1.*',
+        'pyfuse3>=3.2.1,<4',
+        'trio>=0.19.0,<0.20',
     ],
-    packages=['ipfs_api_mount'],
-    scripts=['bin/ipfs-api-mount'],
+    packages=find_packages(),
+    scripts=[
+        'bin/ipfs-api-mount',
+        'bin/ipfs-api-mount-whole',
+    ],
     package_data={
         'ipfs_api_mount': ['ipfs_api_mount/unixfs.proto'],
     },
     cmdclass={
-        'build': custom_build,
+        'build_py': custom_build_py,
         'develop': custom_develop,
     },
 )

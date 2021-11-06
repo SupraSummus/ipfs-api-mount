@@ -1,7 +1,7 @@
 #!/bin/sh
 
 # abort on any error
-set -e
+set -euo pipefail
 
 ipfs version
 
@@ -16,20 +16,20 @@ echo -e "\t$data_in_dir/data"
 echo
 
 echo "### ipfs cat $data"
-time { ipfs cat "$data" >/dev/null 2>&1; }
+time { ipfs cat "$data" | sha256sum - 2>&1; }
 echo
+
 
 tmp_mnt=$(mktemp -d)
 echo "### ipfs-api-mount $data_in_dir $tmp_mnt"
-ipfs-api-mount --background "$data_in_dir" "$tmp_mnt"
+ipfs-api-mount "$data_in_dir" "$tmp_mnt" & sleep 3
 echo "### cat $tmp_mnt/data"
-time cat "$tmp_mnt/data" >/dev/null
-fusermount -u "$tmp_mnt"
+time { cat "$tmp_mnt/data" | sha256sum -; }
+fusermount3 -u "$tmp_mnt"
 echo
 rmdir "$tmp_mnt"
 
+
 echo "### cat /ipfs/$data"
-time cat "/ipfs/$data" >/dev/null
+time { cat "/ipfs/$data" | sha256sum -; }
 echo
-
-

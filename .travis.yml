@@ -1,35 +1,38 @@
+branches:
+  only:
+    - master
+dist: focal
 language: python
 python:
-  - "3.6"
-  - "3.7"
-  - "3.8"
+  - "3.7.9"
+  - "3.8.5"
+  - "3.9.1"
   - "pypy3"
 env:
   global:
     - PROTOC_VERSION=3.12.0
   jobs:
-    - GO_IPFS_VERSION=0.4.22
-    - GO_IPFS_VERSION=0.5.1
-    - GO_IPFS_VERSION=0.6.0
+    - GO_IPFS_VERSION=0.7.0
+    - GO_IPFS_VERSION=0.8.0
+    - GO_IPFS_VERSION=0.9.1
+    - GO_IPFS_VERSION=0.10.0
 before_install:
-  - sudo apt-get install -qq pkg-config fuse
+  - sudo apt-get install -qq pkg-config fuse3 libfuse3-dev
   - sudo modprobe fuse
   - sudo chmod 666 /dev/fuse
   - sudo chown root:$USER /etc/fuse.conf
 install:
-  - pip install -r requirements.txt
-  - pip install coverage codecov
-  - curl https://dist.ipfs.io/go-ipfs/v${GO_IPFS_VERSION}/go-ipfs_v${GO_IPFS_VERSION}_linux-amd64.tar.gz | tar xvz
+  - pip install tox codecov
+  - curl --location https://github.com/ipfs/go-ipfs/releases/download/v${GO_IPFS_VERSION}/go-ipfs_v${GO_IPFS_VERSION}_linux-amd64.tar.gz | tar xvz
   - export PATH=$PATH:$(pwd)/go-ipfs
   - curl -L https://github.com/protocolbuffers/protobuf/releases/download/v${PROTOC_VERSION}/protoc-${PROTOC_VERSION}-linux-x86_64.zip > protoc.zip
   - sudo unzip -d /usr/local protoc.zip
   - sudo chmod a+x /usr/local/bin/protoc
-  - python setup.py build
 script:
-  - flake8
+  - tox -e flake8
   - ipfs daemon --offline --init &
   - IPFS_PID=$!
   - sleep 1
-  - coverage run --source=ipfs_api_mount/ setup.py test
+  - tox -e $(echo py${TRAVIS_PYTHON_VERSION} | cut -f1,2 -d. | tr -d . | sed -e 's/pypypy/pypy/')
   - kill $IPFS_PID
   - codecov

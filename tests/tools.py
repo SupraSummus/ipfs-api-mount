@@ -1,8 +1,7 @@
-from unittest import mock
 import tempfile
+from unittest import mock
 
 import ipfshttpclient
-
 
 ipfs_client = ipfshttpclient.connect('/ip4/127.0.0.1/tcp/5001/http')
 
@@ -24,7 +23,7 @@ def ipfs_dir(contents):
 
 def request_count_measurement(client):
     return mock.patch.object(
-        ipfshttpclient.http.ClientSync,
+        ipfshttpclient.http._backend.ClientSync,
         '_request',
         wraps=client._client._request,
     )
